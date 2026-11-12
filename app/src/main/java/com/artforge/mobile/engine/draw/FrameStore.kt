@@ -13,6 +13,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Disk-backed, memory-bounded store for frame pixel data.
