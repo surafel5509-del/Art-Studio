@@ -70,9 +70,16 @@ jobs:
                   continue
               for case in root.iter('testcase'):
                   for fail in list(case.iter('failure')) + list(case.iter('error')):
-                      msg = (fail.get('message') or fail.text or '').strip().splitlines()
-                      head = ' '.join(msg[:3])[:700]
-                      print(f"::error::{case.get('classname')}.{case.get('name')}: {head}")
+                      msg = (fail.get('message') or '').strip()
+                      body = (fail.text or '').strip().splitlines()
+                      # Include the first stack frames: assertion messages are often
+                      # empty (e.g. NullPointerException) and the frame names are what
+                      # actually locate the defect.
+                      detail = ' | '.join(body[:6])[:700]
+                      print(
+                          f"::error::{case.get('classname')}.{case.get('name')}: "
+                          f"{msg[:200]} {detail}"
+                      )
           PYEOF
           tail -20 build.log || true
           exit 1

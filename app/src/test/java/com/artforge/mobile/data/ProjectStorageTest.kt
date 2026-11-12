@@ -39,6 +39,11 @@ class ProjectStorageTest {
             .allowMainThreadQueries()
             .build()
         store = FrameStore(File(appContext.cacheDir, "storage_test_frames"), 32L * 1024 * 1024)
+        // Each test gets clean on-disk state: packages, frames, audio, versions and
+        // recovery rows all live under the app's files dir.
+        listOf("projects", "frames", "audio", "versions").forEach { dir ->
+            File(appContext.filesDir, dir).deleteRecursively()
+        }
         repo = ProjectRepository(appContext, db, store)
     }
 
