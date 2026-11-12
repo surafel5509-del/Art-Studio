@@ -750,7 +750,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         activeStrokeLayer = layer
         activeStrokeFrameId = frameId
         strokePoints = arrayListOf(point)
-        drawingEngine.beginStroke(bitmap, effectiveTool, color, settings, applyPressureCurve(point))
+        // The view model renders a live preview from the stroke buffer and commits it
+        // itself (dodge/burn need an extra pass), so the engine must not merge per dab.
+        drawingEngine.beginStroke(
+            bitmap, effectiveTool, color, settings, applyPressureCurve(point), previewOnly = true,
+        )
         return true
     }
 

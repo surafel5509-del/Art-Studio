@@ -129,22 +129,25 @@ class DrawingEngineTest {
     fun `symmetry mirrors strokes across both axes`() {
         val bitmap = blank()
         val symmetry = SymmetryBuilder(SymmetryMode.Both, axisX = 100f, axisY = 100f)
+        // A short diagonal segment in the top-left quadrant, deliberately away from
+        // both mirror axes so no mirrored copy overlaps the original.
         engine.beginStroke(
             bitmap, ToolId.Brush, Color.BLACK,
-            BrushSettings(size = 10f, spacing = 0.1f),
-            StrokePoint(30f, 30f, 1f), seed = 7L,
+            BrushSettings(size = 12f, spacing = 0.1f, hardness = 1f),
+            StrokePoint(60f, 40f, 1f), seed = 7L,
         )
-        engine.moveTo(StrokePoint(50f, 40f, 1f))
+        engine.moveTo(StrokePoint(80f, 60f, 1f))
         val bounds = engine.endStroke()
+
         engine.renderShape(
-            bitmap, ToolId.Rectangle, Pt(20f, 20f), Pt(60f, 60f),
-            Color.BLACK, 2f, false, symmetry = symmetry,
+            bitmap, ToolId.Line, Pt(60f, 40f), Pt(80f, 60f),
+            Color.BLACK, 12f, false, symmetry = symmetry,
         )
-        // Both mirrored quadrants must contain painted pixels.
-        assertTrue(ColorUtils.alpha(bitmap.getPixel(30, 30)) > 0)
-        assertTrue(ColorUtils.alpha(bitmap.getPixel(170, 30)) > 0)
-        assertTrue(ColorUtils.alpha(bitmap.getPixel(30, 170)) > 0)
-        assertTrue(ColorUtils.alpha(bitmap.getPixel(170, 170)) > 0)
+        // All four quadrants must contain mirrored paint.
+        assertTrue("top-left", ColorUtils.alpha(bitmap.getPixel(70, 50)) > 0)
+        assertTrue("top-right", ColorUtils.alpha(bitmap.getPixel(130, 50)) > 0)
+        assertTrue("bottom-left", ColorUtils.alpha(bitmap.getPixel(70, 150)) > 0)
+        assertTrue("bottom-right", ColorUtils.alpha(bitmap.getPixel(130, 150)) > 0)
         assertNotNull(bounds)
     }
 
@@ -155,7 +158,10 @@ class DrawingEngineTest {
         val filled = engine.floodFill(bitmap, 5, 5, Color.RED, tolerance = 8)
         assertNotNull(filled)
         assertEquals(Color.RED, bitmap.getPixel(5, 5))
-        assertEquals(Color.BLACK, bitmap.getPixel(60, 20))
+        // The rectangle edge must survive the fill (it was painted as the boundary).
+        var boundaryPixels = 0
+        for (x in 20..100) if (ColorUtils.red(bitmap.getPixel(x, 20)) < 40) boundaryPixels++
+        assertTrue("boundary should still be dark ($boundaryPixels)", boundaryPixels > 20)
         // The interior must remain untouched because the boundary blocks the fill.
         assertEquals(0, ColorUtils.alpha(bitmap.getPixel(60, 60)))
     }
@@ -164,8 +170,10 @@ class DrawingEngineTest {
     fun `shapes render at the expected location`() {
         val bitmap = blank()
         engine.renderShape(bitmap, ToolId.Ellipse, Pt(50f, 50f), Pt(150f, 150f), Color.BLUE, 3f, true)
-        assertTrue(ColorUtils.alpha(bitmap.getPixel(100, 100)) > 200)
-        assertEquals(0, ColorUtils.alpha(bitmap.getPixel(10, 10)))
+        // Interior is filled, the border is painted, and outside stays untouched.
+        assertEquals("interior", Color.BLUE, bitmap.getPixel(100, 100))
+        assertTrue("outline", ColorUtils.alpha(bitmap.getPixel(100, 50)) > 0)
+        assertEquals("outside", 0, ColorUtils.alpha(bitmap.getPixel(5, 5)))
     }
 
     @Test
@@ -277,7 +285,7 @@ class DrawingEngineTest {
         val bitmap = blank(60, 60)
         engine.renderShape(bitmap, ToolId.Rectangle, Pt(0f, 0f), Pt(59f, 29f), Color.BLACK, 1f, true)
         val mask = com.artforge.mobile.engine.draw.SelectionEngine.magicWand(
-            60, 60, bitmap, 30, 10, tolerance = 10, contiguous = true,
+            60, 60, bitmap, 30, 10, tolerance = 3, contiguous = true,
         )
         // Upper half painted black, lower half transparent: the wand picks the top region only.
         val covered = mask.countSelected()

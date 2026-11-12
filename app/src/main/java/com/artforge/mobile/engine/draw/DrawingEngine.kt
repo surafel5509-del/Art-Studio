@@ -72,7 +72,8 @@ class DrawingEngine(
     private var activeTarget: Bitmap? = null
     private var activeSettings: BrushSettings? = null
     private var activeColor: Argb = Color.BLACK
-    private var activeTool: ToolId = ToolId.Brush
+    var activeTool: ToolId = ToolId.Brush
+        private set
     private var lastDab: Pt? = null
     private var strokeLeftovers = 0f
     private var strokeBounds: RectF2? = null
@@ -93,7 +94,9 @@ class DrawingEngine(
         settings: BrushSettings,
         first: StrokePoint,
         seed: Long = System.nanoTime(),
+        previewOnly: Boolean = false,
     ) {
+        this.previewOnly = previewOnly
         if (activeStrokeBmp != null) cancelStroke()
         activeTarget = target
         activeTool = tool
@@ -172,17 +175,19 @@ class DrawingEngine(
         val target = activeTarget
         val buffer = activeStrokeBmp
         if (target != null && buffer != null) {
-            val canvas = Canvas(target)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
             when (activeTool) {
                 // Erasers clear coverage where the stroke buffer has pigment.
-                ToolId.Eraser, ToolId.PixelEraser ->
-                    paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
+                ToolId.Eraser, ToolId.PixelEraser -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
+                    }
+                    Canvas(target).drawBitmap(buffer, 0f, 0f, paint)
+                }
                 // The effect tools (smudge/blur/sharpen/dodge/burn/clone) already wrote
                 // their result straight into the layer, so the buffer must not be merged.
                 ToolId.Smudge, ToolId.Blur, ToolId.Sharpen, ToolId.Dodge, ToolId.Burn,
                 ToolId.CloneStamp -> Unit
-                else -> canvas.drawBitmap(buffer, 0f, 0f, paint)
+                else -> commitToTarget()
             }
             target.setHasAlpha(true)
         }
@@ -194,6 +199,7 @@ class DrawingEngine(
         activeTarget = null
         lastDab = null
         strokeLeftovers = 0f
+        previewOnly = false
         return bounds
     }
 
@@ -206,6 +212,7 @@ class DrawingEngine(
         activeTarget = null
         lastDab = null
         strokeBounds = null
+        previewOnly = false
     }
 
     /**
@@ -429,9 +436,28 @@ class DrawingEngine(
     }
 
     /** Copies the offscreen stroke buffer into the layer bitmap. */
+    /**
+     * Copies the offscreen stroke buffer into the layer straight away.
+     *
+     * The buffer exists so the compositor can show a live preview and so undo can
+     * capture the exact dirty rect; merging per dab keeps the layer content and the
+     * preview in sync even if the stroke is interrupted by a re-render.
+     */
     private fun flushStrokeToTarget() {
-        // The buffer is composited once at stroke end for performance; live preview
-        // is drawn by the compositor using drawActiveStroke().
+        if (previewOnly) return
+        commitToTarget()
+    }
+
+    /**
+     * Merges the accumulated stroke buffer into the layer as it currently stands.
+     * Called by preview-mode callers right before the stroke ends so the pixels land
+     * in exactly one place, and by [endStroke] otherwise.
+     */
+    fun commitToTarget() {
+        val target = activeTarget ?: return
+        val buffer = activeStrokeBmp ?: return
+        if (activeTool == ToolId.Smudge || activeTool == ToolId.Blur || activeTool == ToolId.Sharpen) return
+        Canvas(target).drawBitmap(buffer, 0f, 0f, liveMergePaint)
     }
 
     // -----------------------------------------------------------------------
@@ -648,6 +674,7 @@ class DrawingEngine(
         var minY = y
         var maxY = y
         val fillA = ColorUtils.alpha(color)
+        val seedAlpha = ColorUtils.alpha(seed)
         val seedR = ColorUtils.red(seed)
         val seedG = ColorUtils.green(seed)
         val seedB = ColorUtils.blue(seed)
@@ -655,6 +682,11 @@ class DrawingEngine(
 
         fun matches(c: Int): Boolean {
             if (c == seed) return true
+            // Fully transparent pixels have no meaningful RGB, so compare coverage
+            // only: this is what lets a fill spread across an empty canvas.
+            if (seedAlpha == 0 || ColorUtils.alpha(c) == 0) {
+                return kotlin.math.abs(ColorUtils.alpha(c) - seedAlpha) <= tolerance
+            }
             val dr = ColorUtils.red(c) - seedR
             val dg = ColorUtils.green(c) - seedG
             val db = ColorUtils.blue(c) - seedB

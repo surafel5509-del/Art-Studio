@@ -7,6 +7,7 @@ import com.artforge.mobile.core.model.BrushCategory
 import com.artforge.mobile.core.model.Bone
 import com.artforge.mobile.core.model.ComicBubble
 import com.artforge.mobile.core.model.ComicPanel
+import com.artforge.mobile.core.model.SymmetryMode
 import com.artforge.mobile.core.model.Pt
 import com.artforge.mobile.core.model.VectorShape
 import com.artforge.mobile.engine.animation.CharacterRig
@@ -260,6 +261,16 @@ class EngineExtrasTest {
     }
 
     // ---- perspective -----------------------------------------------------
+
+    @Test
+    fun `symmetry mirroring is exact for both axes`() {
+        val p = Pt(20f, 30f)
+        val mirrored = PerspectiveEngine.symmetryPoints(p, SymmetryMode.Both, 200f, 200f)
+        assertEquals(4, mirrored.size)
+        assertTrue(mirrored.contains(Pt(180f, 30f)))
+        assertTrue(mirrored.contains(Pt(20f, 170f)))
+        assertTrue(mirrored.contains(Pt(180f, 170f)))
+    }
 
     @Test
     fun `snapping pulls points onto the horizon`() {
