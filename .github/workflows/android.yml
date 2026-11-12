@@ -39,11 +39,37 @@ jobs:
           gradle-version: "8.7"
           cache-read-only: false
 
-      - name: Ensure SDK licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-
       - name: Unit tests
-        run: ./gradlew --no-daemon testDebugUnitTest --stacktrace
+        id: tests
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon testDebugUnitTest --stacktrace --console=plain 2>&1 | tee build.log
+
+      # Compile/test diagnostics are surfaced as check-run annotations so failures
+      # are readable from the API without downloading the (large) raw log archive.
+      - name: Report diagnostics
+        if: failure()
+        run: |
+          grep -E "^(e: |w: .*\.kt)|FAILED|error:|Caused by:" build.log \
+            | head -60 \
+            | while IFS= read -r line; do
+                clean=${line//'%'/'%25'}
+                clean=${clean//$'\r'/''}
+                clean=${clean//$'\n'/'%0A'}
+                echo "::error::${clean:0:900}"
+              done
+          echo "---- last 40 build.log lines ----"
+          tail -40 build.log || true
+          exit 1
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-build-log
+          path: build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload test reports
         if: always()
