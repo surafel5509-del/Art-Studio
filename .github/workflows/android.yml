@@ -200,10 +200,11 @@ jobs:
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 29
+          api-level: 30
           target: google_apis
-          arch: x86
+          arch: x86_64
           profile: pixel_3a
+          force-avd-creation: true
           disable-animations: true
           # The emulator takes several minutes to boot and install the APK; without a
           # generous limit the runner kills it before any test output is produced.
