@@ -36,7 +36,10 @@ object GifEncoder {
         val width = frames.maxOf { it.width }
         val height = frames.maxOf { it.height }
         val palette = buildPalette()
-        val delayCs = (100.0 / fps.coerceIn(1, 100)).toInt().coerceAtLeast(2)
+        // The GIF delay field is in hundredths of a second and integer-valued, so only
+        // 100/n is exact. At 24 fps 4cs gives 25 fps and 5cs gives 20 fps; the closest
+        // representable rate is 4cs, and the real rate is reported back to the caller.
+        val delayCs = Math.round(100.0 / fps.coerceIn(1, 100)).toInt().coerceIn(2, 100)
 
         out.write(HEADER.toByteArray())
         // Logical screen descriptor with a global colour table (256 entries).

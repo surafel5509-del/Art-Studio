@@ -213,7 +213,15 @@ class ExportEngine(
                 } ?: return@withContext ExportResult(false, null, "Could not open the destination")
             }
             onProgress(1f)
-            ExportResult(true, file, "Exported ${file.name}")
+            // GIF stores frame delay in whole centiseconds, so a 24 fps timeline is
+            // written as 4cs (25 fps). Say so instead of pretending it is exact.
+            val rateNote = if (options.format == AnimationFormat.Gif) {
+                val actual = 100.0 / Math.round(100.0 / options.fps.coerceIn(1, 100)).toInt().coerceAtLeast(2)
+                if (kotlin.math.abs(actual - options.fps) > 0.01) {
+                    " (GIF timing is quantised to ${"%.2f".format(actual)} fps)"
+                } else ""
+            } else ""
+            ExportResult(true, file, "Exported ${file.name}$rateNote")
         } catch (t: Throwable) {
             ForgeLog.e(TAG, "animation export failed", t)
             ExportResult(false, null, t.message ?: "Animation export failed")
