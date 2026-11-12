@@ -12,6 +12,7 @@ import com.artforge.mobile.core.model.LayerKind
 import com.artforge.mobile.core.model.OnionSkinConfig
 import com.artforge.mobile.engine.animation.AnimationEngine
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -86,13 +87,20 @@ class AnimationEngineTest {
     @Test
     fun `onion skin respects counts and tint colours`() {
         val layer = layerWithFrames("a" to 0, "b" to 1, "c" to 2, "d" to 3)
-        val ghosts = AnimationEngine.onionGhosts(
-            layer, 2,
-            OnionSkinConfig(enabled = true, previousFrames = 2, nextFrames = 1, opacity = 0.4f),
-        )
-        assertEquals(2, ghosts.size)
-        assertTrue(ghosts.any { it.frameId == "d" })
-        assertTrue(ghosts.any { it.frameId == "a" || it.frameId == "b" })
+        val config = OnionSkinConfig(enabled = true, previousFrames = 2, nextFrames = 1, opacity = 0.4f)
+        val ghosts = AnimationEngine.onionGhosts(layer, 2, config)
+        // Two previous drawings (a, b) plus one following (d); the current one is excluded.
+        assertEquals(3, ghosts.size)
+        assertEquals(setOf("a", "b", "d"), ghosts.map { it.frameId }.toSet())
+        assertFalse("current frame must not ghost", ghosts.any { it.frameId == "c" })
+        // Previous ghosts use the previous tint, next ghosts the next tint.
+        ghosts.filter { it.frameId == "a" || it.frameId == "b" }
+            .forEach { assertEquals(config.previousTint, it.tint) }
+        ghosts.first { it.frameId == "d" }.let { assertEquals(config.nextTint, it.tint) }
+        // The nearest ghost is the most opaque one.
+        val nearB = ghosts.first { it.frameId == "b" }.alpha
+        val farA = ghosts.first { it.frameId == "a" }.alpha
+        assertTrue("nearer ghost must be at least as opaque", nearB >= farA)
         val disabled = AnimationEngine.onionGhosts(layer, 2, OnionSkinConfig(enabled = false))
         assertTrue(disabled.isEmpty())
     }
