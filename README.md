@@ -22,8 +22,9 @@ airplane mode.
 ```
 
 The Gradle wrapper (8.7) and wrapper jar are committed, so no local Gradle install is needed.
-CI (`.github/workflows/android.yml`) runs unit tests, builds the debug APK and the release AAB,
-and runs instrumented tests on an API 29 emulator.
+CI (`.github/workflows/android.yml`) runs unit tests, then builds the debug APK and the release
+AAB (uploaded as the `artforge-mobile-artifacts` workflow artifact), and runs instrumented tests
+on an API 34 x86_64 emulator.
 
 Release signing: provide `keystore.properties` at the repo root, or the CI secrets
 `ARTFORGE_KEYSTORE_BASE64`, `ARTFORGE_KEYSTORE_PASSWORD`, `ARTFORGE_KEY_ALIAS`,
@@ -124,6 +125,7 @@ simulated results. Known limitations:
 | Core painting, layers, selection, undo | Complete |
 | Animation timeline, onion skin, keyframes, rigging | Complete |
 | GIF / MP4 / WebM / PNG-sequence / sprite-sheet export | Complete (hardware encoder quality varies by device) |
+| GIF frame timing | GIF stores delay in whole centiseconds, so 24/25/30 fps are written at the nearest representable rate and the export message reports the real rate |
 | SVG export | Vector paths when vector layers exist; otherwise the raster composite is embedded |
 | Comic panels & bubbles | Layout, bubbles, tones and lines are implemented; full page-flow pagination is basic |
 | Colour management | sRGB throughout; no ICC profile conversion or CMYK soft-proofing |
@@ -157,14 +159,17 @@ container (no annotation-processor DI, which keeps build times down).
 
 ## Tests
 
-- `app/src/test` — JVM + Robolectric: colour maths, interpolation/geometry, animation timeline,
-  drawing engine (real pixel assertions: strokes, pressure, eraser, symmetry, fill, gradients,
-  undo patches, frame persistence, selections, magic wand), project storage round-trips
-  (manifest, frames, Room metadata, autosave/recovery, duplication, migration), GIF encoder
-  structure, vector/comic/pixel/effects/rig/perspective engines, layer mutator and canvas
-  transform maths.
-- `app/src/androidTest` — instrumented Compose tests against the real `MainActivity`: home
-  screen, settings, help, and creating a project into the studio.
+- `app/src/test` — JVM + Robolectric: colour maths, interpolation/geometry, animation timeline
+  and onion skin, project storage round-trips (manifest, frames, Room metadata,
+  autosave/recovery, duplication), layer mutator and canvas transform maths.
+- `app/src/androidTest` — device/emulator tests, because they assert on **real rasterised
+  pixels** (Robolectric's `Canvas` is a no-op): drawing engine (strokes, pressure, eraser,
+  symmetry, fill boundary, shapes, magic wand, frame duplication), GIF encoder output,
+  perspective snapping / comic text wrap, vector / pixel / effects / rig engines, plus Compose
+  tests against the real `MainActivity` (home, settings, help, create-project-into-studio).
+
+Unit tests are the required check in CI; the emulator job is allowed to fail so a flaky
+emulator boot never blocks artifact delivery, but its diagnostics are annotated on the run.
 
 ## License
 
