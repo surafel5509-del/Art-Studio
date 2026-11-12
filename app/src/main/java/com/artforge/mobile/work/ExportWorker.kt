@@ -40,6 +40,9 @@ class ExportWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
 
+    /** Last progress value, mirrored to WorkManager progress info. */
+    private var lastProgress: Float = 0f
+
     override suspend fun doWork(): Result {
         val app = applicationContext as ArtForgeApplication
         val projectId = inputData.getString(KEY_PROJECT_ID)
@@ -70,8 +73,7 @@ class ExportWorker(
                         transparent = inputData.getBoolean(KEY_TRANSPARENT, false),
                     )
                     engine.exportImage(doc, options, nameHint = nameHint) { progress ->
-                        // Reporting progress is best-effort; the export itself must not fail on it.
-                        runCatching { setProgress(workDataOf(KEY_PROGRESS to 0.02f + progress * 0.95f)) }
+                        publishProgress(progress)
                     }
                 }
                 else -> {
@@ -93,7 +95,7 @@ class ExportWorker(
                         background = inputData.getInt(KEY_BACKGROUND, 0xFFFFFFFF.toInt()),
                     )
                     engine.exportAnimation(doc, options, nameHint = nameHint) { progress ->
-                        runCatching { setProgress(workDataOf(KEY_PROGRESS to 0.02f + progress * 0.95f)) }
+                        publishProgress(progress)
                     }
                 }
             }
@@ -117,6 +119,17 @@ class ExportWorker(
             } else {
                 Result.failure(workDataOf(KEY_ERROR to result.message))
             }
+        }
+    }
+
+    /**
+     * The export engines report progress from a plain (non-suspending) callback, so the
+     * value is pushed through `setProgressAsync` rather than the suspending `setProgress`.
+     */
+    private fun publishProgress(fraction: Float) {
+        lastProgress = 0.02f + fraction.coerceIn(0f, 1f) * 0.95f
+        runCatching {
+            setProgressAsync(workDataOf(KEY_PROGRESS to lastProgress))
         }
     }
 
