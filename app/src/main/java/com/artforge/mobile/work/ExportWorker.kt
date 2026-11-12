@@ -70,7 +70,8 @@ class ExportWorker(
                         transparent = inputData.getBoolean(KEY_TRANSPARENT, false),
                     )
                     engine.exportImage(doc, options, nameHint = nameHint) { progress ->
-                        setProgress(workDataOf(KEY_PROGRESS to 0.02f + progress * 0.95f))
+                        // Reporting progress is best-effort; the export itself must not fail on it.
+                        runCatching { setProgress(workDataOf(KEY_PROGRESS to 0.02f + progress * 0.95f)) }
                     }
                 }
                 else -> {
@@ -92,7 +93,7 @@ class ExportWorker(
                         background = inputData.getInt(KEY_BACKGROUND, 0xFFFFFFFF.toInt()),
                     )
                     engine.exportAnimation(doc, options, nameHint = nameHint) { progress ->
-                        setProgress(workDataOf(KEY_PROGRESS to 0.02f + progress * 0.95f))
+                        runCatching { setProgress(workDataOf(KEY_PROGRESS to 0.02f + progress * 0.95f)) }
                     }
                 }
             }

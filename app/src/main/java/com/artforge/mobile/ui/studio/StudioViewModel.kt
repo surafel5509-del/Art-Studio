@@ -581,6 +581,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 true
             }
 
+            ToolId.MagicWand -> {
+                selectMagicWand(point.x.toInt(), point.y.toInt())
+                true
+            }
+
             ToolId.BucketFill -> {
                 val frameId = currentFrameId() ?: return false
                 val bitmap = frameStore.load(doc.id, frameId, doc.settings.width, doc.settings.height)
@@ -1046,6 +1051,26 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val bounds = selection?.bounds()?.let { RectF2(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat()) }
         _state.value = _state.value.copy(selection = selection, selectionBounds = bounds)
         scheduleRender()
+    }
+
+    /** Magic-wand selection: contiguous region of similar colour under the tap. */
+    private fun selectMagicWand(x: Int, y: Int) {
+        val doc = _state.value.document ?: return
+        val frameId = currentFrameId() ?: return
+        val bitmap = frameStore.load(doc.id, frameId, doc.settings.width, doc.settings.height)
+        val t = _tools.value
+        val mask = SelectionEngine.magicWand(
+            doc.settings.width,
+            doc.settings.height,
+            bitmap,
+            x,
+            y,
+            t.tolerance,
+            contiguous = true,
+            feather = t.selectionFeather,
+        )
+        applySelection(mask, t.selectionOp)
+        _state.value = _state.value.copy(statusMessage = "Magic wand selection")
     }
 
     fun selectAll() {
