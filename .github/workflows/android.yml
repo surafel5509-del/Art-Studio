@@ -43,7 +43,7 @@ jobs:
         id: tests
         run: |
           set -o pipefail
-          ./gradlew --no-daemon testDebugUnitTest --stacktrace --console=plain 2>&1 | tee build.log
+          ./gradlew --no-daemon testDebugUnitTest --stacktrace --continue --console=plain 2>&1 | tee build.log
 
       # Compile/test diagnostics are surfaced as check-run annotations so failures
       # are readable from the API without downloading the (large) raw log archive.

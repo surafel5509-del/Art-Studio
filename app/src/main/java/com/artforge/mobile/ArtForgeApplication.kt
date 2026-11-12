@@ -76,7 +76,10 @@ class ArtForgeApplication : Application() {
 
     private fun registerWorkers() {
         // Periodic maintenance: prune exports, autosave stale projects, vacuum caches.
-        MaintenanceWorker.enqueue(this)
+        // WorkManager may not be initialised yet (or at all, e.g. under Robolectric or
+        // when the initializer is disabled), so a failure here must never crash startup.
+        runCatching { MaintenanceWorker.enqueue(this) }
+            .onFailure { ForgeLog.w(TAG, "WorkManager unavailable: ${it.message}") }
     }
 
     private fun seedBuiltInAssets() {
