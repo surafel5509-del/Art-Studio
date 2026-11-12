@@ -32,13 +32,24 @@ object PerspectiveEngine {
         return out
     }
 
-    /** Horizontal perspective lines (floor/ceiling grid) between two vanishing points. */
-    fun gridLines(horizonY: Float, floorY: Float, count: Int = 8): List<Pair<Pt, Pt>> {
-        val out = ArrayList<Pair<Pt, Pt>>()
+    /**
+     * Horizontal floor/ceiling lines of a perspective grid, spanning [left]..[right].
+     * Spacing compresses towards the horizon (square-law foreshortening), which is what
+     * makes a one- or two-point floor read as receding instead of a flat ladder.
+     */
+    fun gridLines(
+        horizonY: Float,
+        floorY: Float,
+        count: Int = 8,
+        left: Float = 0f,
+        right: Float = 0f,
+    ): List<Pair<Pt, Pt>> {
+        if (count <= 0) return emptyList()
+        val out = ArrayList<Pair<Pt, Pt>>(count)
         for (i in 1..count) {
             val t = i.toFloat() / (count + 1)
             val y = horizonY + (floorY - horizonY) * (t * t)
-            out.add(Pt(0f, y) to Pt(0f, y))
+            out.add(Pt(left, y) to Pt(right, y))
         }
         return out
     }
@@ -147,6 +158,8 @@ object PerspectiveEngine {
         width: Float,
         height: Float,
         showGuides: Boolean = true,
+        /** Must match the step used by [snap], so drawn rays are the ones you snap to. */
+        angleStepDeg: Float = 15f,
     ) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -159,8 +172,9 @@ object PerspectiveEngine {
             for (vp in guide.points) {
                 paint.shader = null
                 paint.color = vp.color and 0x00FFFFFF or 0x40000000
-                for (i in 0 until 36) {
-                    val a = Math.PI * 2 * i / 36
+                val rayCount = Math.max(4, Math.round(360f / angleStepDeg))
+                for (i in 0 until rayCount) {
+                    val a = Math.PI * 2 * i / rayCount
                     canvas.drawLine(
                         vp.x, vp.y,
                         vp.x + (cos(a) * diag).toFloat(),
@@ -180,6 +194,14 @@ object PerspectiveEngine {
                 color = 0x66FF8A4C
             }
             canvas.drawLine(0f, guide.horizonY, width, guide.horizonY, horizonPaint)
+            // Foreshortened floor/ceiling lines below the horizon complete the grid.
+            val roomLines = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+                color = 0x2A6C8CFF
+            }
+            gridLines(guide.horizonY, height, count = 8, left = 0f, right = width)
+                .forEach { (a, b) -> canvas.drawLine(a.x, a.y, b.x, b.y, roomLines) }
         }
 
         if (symmetry != SymmetryMode.None) {

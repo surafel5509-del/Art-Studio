@@ -212,6 +212,7 @@ fun StudioScreen(
                         onZoom = { f, fx, fy -> vm.zoomBy(f, fx, fy) },
                         onRotate = { d -> vm.rotateBy(d) },
                         onDoubleTap = { vm.resetView() },
+                        onLongPress = { p -> vm.setCloneSource(p) },
                         onViewportMeasured = { w, h, scale ->
                             viewportWidth = w
                             viewportHeight = h

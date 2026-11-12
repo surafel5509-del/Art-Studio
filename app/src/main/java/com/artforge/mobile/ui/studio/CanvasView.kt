@@ -111,6 +111,7 @@ fun CanvasSurface(
     onRotate: (Float) -> Unit,
     onDoubleTap: (Pt) -> Unit,
     onViewportMeasured: (Float, Float, Float) -> Unit,
+    onLongPress: (Pt) -> Unit = {},
 ) {
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val downState = rememberUpdatedState(onPointerDown)
@@ -120,6 +121,7 @@ fun CanvasSurface(
     val zoomState = rememberUpdatedState(onZoom)
     val rotateState = rememberUpdatedState(onRotate)
     val tapState = rememberUpdatedState(onDoubleTap)
+    val longPressState = rememberUpdatedState(onLongPress)
 
     val docW = state.document?.settings?.width?.toFloat() ?: 0f
     val docH = state.document?.settings?.height?.toFloat() ?: 0f
@@ -157,6 +159,7 @@ fun CanvasSurface(
                     onZoom = { f, fx, fy -> zoomState.value(f, fx, fy) },
                     onRotate = { d -> rotateState.value(d) },
                     onDoubleTap = { p -> tapState.value(p) },
+                    onLongPress = { p -> longPressState.value(p) },
                 )
             },
     ) {
@@ -223,6 +226,7 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleCa
     onZoom: (Float, Float, Float) -> Unit,
     onRotate: (Float) -> Unit,
     onDoubleTap: (Pt) -> Unit,
+    onLongPress: (Pt) -> Unit = {},
 ) {
     awaitPointerEventScope {
         val tracked = HashMap<androidx.compose.ui.input.pointer.PointerId, Offset>()
@@ -235,6 +239,9 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleCa
         var lastTapAt = 0L
         var lastTapPos = Offset.Zero
         var lastStylusAt = 0L
+        var pressStartedAt = 0L
+        var pressStartPos: Offset? = null
+        var pressedAtId: androidx.compose.ui.input.pointer.PointerId? = null
 
         fun strokePoint(offset: Offset, pressure: Float, orientation: Float): StrokePoint {
             val doc = transform().toDocument(offset)
@@ -315,6 +322,9 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleCa
                         PointerEventType.Press -> {
                             tracked[change.id] = change.position
                             lastCentroid = change.position
+                            pressStartedAt = now
+                            pressedAtId = change.id
+                            pressStartPos = change.position
                             // Stylus barrel rotation is delivered through the
                             // MotionEvent orientation field; Compose does not expose it
                             // on PointerInputChange, so rotation is left at 0 and the
@@ -351,6 +361,24 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleCa
                         }
 
                         PointerEventType.Release -> {
+                            // A stationary press held past 600 ms is a long-press: used
+                            // to re-pick the clone-stamp source without leaving the tool.
+                            if (pressedAtId == change.id) {
+                                val held = now - pressStartedAt
+                                val moved = pressStartPos?.let {
+                                    hypot(
+                                        (it.x - change.position.x).toDouble(),
+                                        (it.y - change.position.y).toDouble(),
+                                    )
+                                } ?: 0.0
+                                if (held >= 600 && moved < 16.0) {
+                                    onLongPress(transform().toDocument(change.position))
+                                    if (!drawing) change.consume()
+                                }
+                            }
+                            pressStartedAt = 0L
+                            pressedAtId = null
+                            pressStartPos = null
                             if (drawing && drawingId == change.id) {
                                 val p = transform().toDocument(change.position)
                                 onUp(StrokePoint(p.x, p.y, 1f))

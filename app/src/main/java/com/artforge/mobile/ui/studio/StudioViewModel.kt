@@ -107,7 +107,6 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     private var renderJob: Job? = null
     private var polygonPoints: ArrayList<Pt> = ArrayList()
     private var bezierAnchors: ArrayList<Pt> = ArrayList()
-    private var cloneOffset: Pt? = null
     private var displayBitmap: Bitmap? = null
 
     init {
@@ -630,11 +629,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             ToolId.CloneStamp -> {
-                if (cloneOffset == null) {
-                    cloneOffset = Pt(point.x, point.y)
-                    _state.value = _state.value.copy(statusMessage = "Clone source set — now paint")
+                // First tap picks the source; from then on every stroke clones from it.
+                // A long-press-free workflow: tap source, tap image again to start.
+                if (drawingEngine.cloneSource == null) {
+                    drawingEngine.cloneSource = Pt(point.x, point.y)
+                    _state.value = _state.value.copy(
+                        statusMessage = "Clone source set — tap the canvas to paint (long-press to re-pick)",
+                    )
+                    false
+                } else {
+                    startFreehandStroke(point, pressureEnabled)
                 }
-                startFreehandStroke(point, pressureEnabled)
             }
 
             ToolId.Hand, ToolId.Zoom, ToolId.RotateCanvas -> false
@@ -726,10 +731,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val settings = effectiveBrushSettings()
         val tool = _tools.value.tool
 
+        // Dodge/burn are real pixel operations applied after the stroke; the clone
+        // stamp has its own dab path in the engine.
         val effectiveTool = when (tool) {
             ToolId.Dodge -> ToolId.Brush
             ToolId.Burn -> ToolId.Brush
-            ToolId.CloneStamp -> ToolId.Brush
             else -> tool
         }
         val color = when (tool) {
@@ -750,6 +756,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         activeStrokeLayer = layer
         activeStrokeFrameId = frameId
         strokePoints = arrayListOf(point)
+        if (tool == ToolId.CloneStamp) {
+            // Re-arm the source at the paint point when the user has not picked one,
+            // so the tool never silently paints a plain colour.
+            if (drawingEngine.cloneSource == null) drawingEngine.cloneSource = Pt(point.x, point.y)
+        }
         // The view model renders a live preview from the stroke buffer and commits it
         // itself (dodge/burn need an extra pass), so the engine must not merge per dab.
         drawingEngine.beginStroke(
@@ -1279,8 +1290,23 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         scheduleRender()
     }
 
+    /**
+     * Shows/hides the perspective + symmetry guides. This is a view preference, so it
+     * is persisted to DataStore and re-applied to the canvas render request.
+     */
+    /** Long-press on the canvas: re-pick the clone-stamp source point. */
+    fun setCloneSource(point: Pt) {
+        if (_tools.value.tool != ToolId.CloneStamp) return
+        drawingEngine.cloneSource = point
+        _state.value = _state.value.copy(statusMessage = "Clone source moved")
+        scheduleRender()
+    }
+
     fun toggleGuides(show: Boolean) {
-        _state.value = _state.value.copy(document = _state.value.document?.copy(), dirty = _state.value.dirty)
+        if (_settings.value.showGuides == show) return
+        _settings.value = _settings.value.copy(showGuides = show)
+        viewModelScope.launch { settingsRepo.update { it.copy(showGuides = show) } }
+        scheduleRender()
     }
 
     private fun snapPoint(point: Pt): Pt {
@@ -2131,6 +2157,9 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             preview = _state.value.drawPreview,
             brushCursor = null,
             brushCursorRadius = _tools.value.brushSize / 2f,
+            cloneSource = if (_tools.value.tool == ToolId.CloneStamp) {
+                drawingEngine.cloneSource?.let { it.x to it.y }
+            } else null,
             showComicFurniture = doc.kind == ProjectKind.Comic,
             pixelMode = doc.kind == ProjectKind.PixelArt,
             previewQuality = _settings.value.renderQuality,

@@ -88,6 +88,11 @@ class DrawingEngine(
     private var strokeBounds: RectF2? = null
     private val rng = Random(System.nanoTime())
     private var smudgeSampler: Bitmap? = null
+    private var cloneSnapshot: Bitmap? = null
+    private var cloneDelta: Pt = Pt(0f, 0f)
+
+    /** Source point for the clone stamp; set by the UI when the user taps a source. */
+    var cloneSource: Pt? = null
     private var accumulatedAlpha = 0f
 
     val isStrokeActive: Boolean get() = activeStrokeBmp != null
@@ -124,6 +129,13 @@ class DrawingEngine(
         if (tool == ToolId.Smudge || tool == ToolId.Blur || tool == ToolId.Sharpen) {
             smudgeSampler = target.copy(Bitmap.Config.ARGB_8888, false)
         }
+        if (tool == ToolId.CloneStamp) {
+            // Freeze the layer at stroke start so the clone does not smear pixels the
+            // stroke itself has just painted.
+            cloneSnapshot = target.copy(Bitmap.Config.ARGB_8888, false)
+            val src = cloneSource
+            cloneDelta = if (src == null) Pt(0f, 0f) else Pt(src.x - first.x, src.y - first.y)
+        }
         moveTo(first)
     }
 
@@ -137,6 +149,10 @@ class DrawingEngine(
 
         if (tool == ToolId.Smudge || tool == ToolId.Blur || tool == ToolId.Sharpen) {
             paintEffectDab(point, settings)
+            return
+        }
+        if (tool == ToolId.CloneStamp) {
+            paintCloneDab(point)
             return
         }
 
@@ -192,10 +208,9 @@ class DrawingEngine(
                     }
                     Canvas(target).drawBitmap(buffer, 0f, 0f, paint)
                 }
-                // The effect tools (smudge/blur/sharpen/dodge/burn/clone) already wrote
-                // their result straight into the layer, so the buffer must not be merged.
-                ToolId.Smudge, ToolId.Blur, ToolId.Sharpen, ToolId.Dodge, ToolId.Burn,
-                ToolId.CloneStamp -> Unit
+                // These tools already wrote their result straight into the layer, so
+                // their offscreen buffer must not be merged on top of it.
+                ToolId.Smudge, ToolId.Blur, ToolId.Sharpen, ToolId.Dodge, ToolId.Burn -> Unit
                 else -> commitToTarget()
             }
             target.setHasAlpha(true)
@@ -203,6 +218,7 @@ class DrawingEngine(
         buffer?.recycle()
         smudgeSampler?.recycle()
         smudgeSampler = null
+        cloneSnapshot = null
         activeStrokeBmp = null
         activeStrokeCanvas = null
         activeTarget = null
@@ -215,9 +231,10 @@ class DrawingEngine(
     fun cancelStroke() {
         activeStrokeBmp?.recycle()
         smudgeSampler?.recycle()
+        smudgeSampler = null
+        cloneSnapshot = null
         activeStrokeBmp = null
         activeStrokeCanvas = null
-        smudgeSampler = null
         activeTarget = null
         lastDab = null
         strokeBounds = null
@@ -236,6 +253,41 @@ class DrawingEngine(
     // -----------------------------------------------------------------------
     // Dab stamping
     // -----------------------------------------------------------------------
+
+    /**
+     * Clone stamp dab: copies pixels from the frozen snapshot at the source offset
+     * into the stroke buffer, clipped to a circular brush mask.
+     */
+    private fun paintCloneDab(point: StrokePoint) {
+        val canvas = activeStrokeCanvas ?: return
+        val snapshot = cloneSnapshot ?: return
+        val settings = activeSettings ?: return
+        val radius = (settings.size / 2f).coerceAtLeast(0.5f)
+        val dest = Pt(point.x, point.y)
+        val src = Pt(dest.x + cloneDelta.x, dest.y + cloneDelta.y)
+        if (src.x < 0f || src.y < 0f || src.x >= snapshot.width || src.y >= snapshot.height) {
+            cloneHint = "Clone source is off-canvas — tap a source point first"
+            return
+        }
+        cloneHint = null
+        val pressure = point.pressure.coerceIn(0f, 1f)
+        val alpha = (settings.opacity * (1f - (1f - pressure) * (1f - settings.pressureOpacity)))
+            .coerceIn(0f, 1f)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            this.alpha = (alpha * 255).toInt().coerceIn(0, 255)
+        }
+        canvas.save()
+        val clip = Path().apply { addCircle(dest.x, dest.y, radius, Path.Direction.CW) }
+        canvas.clipPath(clip)
+        canvas.drawBitmap(snapshot, -cloneDelta.x, -cloneDelta.y, paint)
+        canvas.restore()
+        val b = RectF2(dest.x - radius, dest.y - radius, dest.x + radius, dest.y + radius)
+        strokeBounds = strokeBounds?.union(b) ?: b
+    }
+
+    /** Non-null when the last clone attempt could not sample its source. */
+    var cloneHint: String? = null
+        private set
 
     private fun stampDab(x: Float, y: Float, point: StrokePoint, s: BrushSettings, color: Argb) {
         val canvas = activeStrokeCanvas ?: return

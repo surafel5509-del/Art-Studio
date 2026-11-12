@@ -59,6 +59,8 @@ class CanvasRenderer(
         val previewQuality: Float,
         val ghostShapes: List<com.artforge.mobile.core.model.VectorShape> = emptyList(),
         val activeStrokeBitmap: Bitmap? = null,
+        /** Crosshair position of the clone-stamp source, if the tool has one. */
+        val cloneSource: Pair<Float, Float>? = null,
     )
 
     fun render(request: RenderRequest): Bitmap {
@@ -137,6 +139,19 @@ class CanvasRenderer(
         }
 
         request.preview?.let { drawPreview(canvas, it, scaleX, scaleY, request) }
+
+        request.cloneSource?.let { (sx, sy) ->
+            val cx = sx * scaleX
+            val cy = sy * scaleY
+            val srcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 1.6f
+                color = 0xFF4FD1E8.toInt()
+            }
+            canvas.drawCircle(cx, cy, 10f, srcPaint)
+            canvas.drawLine(cx - 14f, cy, cx + 14f, cy, srcPaint)
+            canvas.drawLine(cx, cy - 14f, cx, cy + 14f, srcPaint)
+        }
 
         request.brushCursor?.let { (x, y) ->
             val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
