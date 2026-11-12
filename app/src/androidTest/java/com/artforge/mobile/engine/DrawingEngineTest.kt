@@ -32,6 +32,8 @@ import java.io.File
  */
 @RunWith(AndroidJUnit4::class)
 class DrawingEngineTest {
+    // These assertions inspect real pixels, so they must run on a device/emulator:
+    // Robolectric's Canvas is a no-op and never rasterises into a Bitmap.
 
     private lateinit var store: FrameStore
     private lateinit var engine: DrawingEngine

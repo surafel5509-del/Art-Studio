@@ -214,7 +214,8 @@ object ComicEngine {
     }
 
     fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
-        val words = text.split(' ')
+        if (maxWidth <= 0f) return listOf(text)
+        val words = text.split(' ').filter { it.isNotEmpty() }
         val lines = ArrayList<String>()
         var current = StringBuilder()
         for (word in words) {

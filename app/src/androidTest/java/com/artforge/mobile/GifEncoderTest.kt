@@ -1,4 +1,4 @@
-package com.artforge.mobile.data
+package com.artforge.mobile
 
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -21,7 +21,8 @@ class GifEncoderTest {
 
     private fun frame(color: Int, w: Int = 32, h: Int = 16): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        bmp.eraseColor(color)
+        val pixels = IntArray(w * h) { color }
+        bmp.setPixels(pixels, 0, w, 0, 0, w, h)
         return bmp
     }
 

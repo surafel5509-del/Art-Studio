@@ -67,26 +67,35 @@ object PerspectiveEngine {
      * snapped to the closest vanishing-point ray when inside [tolerance], else to
      * the horizon, else unchanged.
      */
-    fun snap(point: Pt, guide: PerspectiveGuide, width: Float, height: Float, tolerance: Float = 24f): Pt {
+    fun snap(
+        point: Pt,
+        guide: PerspectiveGuide,
+        width: Float,
+        height: Float,
+        tolerance: Float = 24f,
+        angleStepDeg: Float = 15f,
+    ): Pt {
         if (!guide.enabled) return point
         var best = point
         var bestDist = tolerance
+        // Rays leave each vanishing point at fixed angles, so a point snaps onto the
+        // ray *line* it is closest to (perpendicular projection), not onto the ray
+        // that already passes through it.
+        val stepRad = Math.toRadians(angleStepDeg.toDouble())
+        val rayCount = Math.round(Math.PI / stepRad).toInt().coerceAtLeast(1)
         for (vp in guide.points) {
-            val vpPoint = Pt(vp.x, vp.y)
-            val dx = point.x - vp.x
-            val dy = point.y - vp.y
-            val len = kotlin.math.sqrt(dx * dx + dy * dy)
-            if (len < 1f) continue
-            val angle = kotlin.math.atan2(dy.toDouble(), dx.toDouble()).toFloat()
-            val snapped = projectOntoRay(point, vpPoint, angle)
-            val dist = snapped.distanceTo(point)
-            if (dist < bestDist) {
-                bestDist = dist
-                best = snapped
+            for (i in 0 until rayCount) {
+                val angle = (i * stepRad).toFloat()
+                val projected = projectOntoRay(point, Pt(vp.x, vp.y), angle)
+                val dist = projected.distanceTo(point)
+                if (dist < bestDist - 0.0001f) {
+                    bestDist = dist
+                    best = projected
+                }
             }
         }
-        // The horizon itself is a snap target: it is checked first and wins ties,
-        // because "align to the horizon" is the most common artistic intent.
+        // The horizon is a snap target in its own right and wins ties: "align to the
+        // horizon" is the most common artistic intent when both are in range.
         val horizonDist = kotlin.math.abs(point.y - guide.horizonY)
         if (horizonDist <= tolerance && horizonDist <= bestDist) {
             bestDist = horizonDist
