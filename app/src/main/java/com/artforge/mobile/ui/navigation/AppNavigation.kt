@@ -87,7 +87,12 @@ fun AppNavigation(startProjectId: String? = null) {
                 arguments = listOf(navArgument("projectId") { type = NavType.StringType }),
             ) { entry ->
                 val projectId = entry.arguments?.getString("projectId").orEmpty()
-                StudioScreen(projectId = projectId, onBack = { navController.popBackStack() })
+                StudioScreen(
+                    projectId = projectId,
+                    onBack = { navController.popBackStack() },
+                    // Ctrl+O: save is the caller's job; just return to the project list.
+                    onOpenProjectRequest = { navController.popBackStack() },
+                )
             }
 
             composable(Routes.Settings) {

@@ -78,6 +78,8 @@ import com.artforge.mobile.ui.theme.ForgeColors
 fun StudioScreen(
     projectId: String,
     onBack: () -> Unit,
+    /** Ctrl+O: leave the studio for the project picker. */
+    onOpenProjectRequest: () -> Unit = onBack,
     vm: StudioViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -166,7 +168,24 @@ fun StudioScreen(
         )
     }
 
-    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+    val shortcutActions = remember(vm) {
+        StudioShortcutActions(
+            undo = vm::undo,
+            redo = vm::redo,
+            save = { vm.saveProject() },
+            open = onOpenProjectRequest,
+            selectTool = vm::selectTool,
+            previousFrame = vm::previousFrame,
+            nextFrame = vm::nextFrame,
+            togglePlayback = vm::togglePlayback,
+            duplicateFrame = vm::duplicateFrame,
+        )
+    }
+
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxSize().studioShortcuts(shortcutActions),
+    ) {
         Column(Modifier.fillMaxSize()) {
             StudioTopBar(
                 state = state,
