@@ -315,20 +315,11 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleCa
                         PointerEventType.Press -> {
                             tracked[change.id] = change.position
                             lastCentroid = change.position
-                            // Stylus barrel rotation in radians. `orientation` is
-                            // available from API 33; older devices report no rotation.
-                            val orientation = if (android.os.Build.VERSION.SDK_INT >= 33) {
-                                val matrix = change.orientation
-                                if (matrix != null && !matrix.isIdentity) {
-                                    val v = floatArrayOf(1f, 0f)
-                                    matrix.mapPoints(v)
-                                    atan2(v[1].toDouble(), v[0].toDouble()).toFloat()
-                                } else {
-                                    0f
-                                }
-                            } else {
-                                0f
-                            }
+                            // Stylus barrel rotation is delivered through the
+                            // MotionEvent orientation field; Compose does not expose it
+                            // on PointerInputChange, so rotation is left at 0 and the
+                            // brush falls back to pressure/tilt only.
+                            val orientation = 0f
                             if (canDraw) {
                                 val consumed = onDown(
                                     strokePoint(change.position, change.pressure, orientation),

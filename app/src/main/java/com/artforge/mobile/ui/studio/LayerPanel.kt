@@ -307,6 +307,7 @@ private fun LayerRow(
                 Icon(Icons.Filled.MoreVert, "More", tint = ForgeColors.TextMuted, modifier = Modifier.size(16.dp))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                @Composable
                 fun item(label: String, action: () -> Unit) {
                     DropdownMenuItem(text = { Text(label) }, onClick = { menu = false; action() })
                 }
