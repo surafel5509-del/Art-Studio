@@ -16,7 +16,7 @@ class ExportDoneReceiver : BroadcastReceiver() {
         ForgeLog.i(TAG, "export completed: $path")
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val existing = prefs.getStringSet(KEY_EXPORTS, emptySet()) ?: emptySet()
-        prefs.edit().putStringSet(KEY_EXPORTS, (existing + path).takeLast(50).toSet()).apply()
+        prefs.edit().putStringSet(KEY_EXPORTS, (existing + path).toList().takeLast(50).toSet()).apply()
     }
 
     companion object {
@@ -30,7 +30,7 @@ class ExportDoneReceiver : BroadcastReceiver() {
         fun record(context: Context, file: java.io.File) {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val existing = prefs.getStringSet(KEY_EXPORTS, emptySet()) ?: emptySet()
-            prefs.edit().putStringSet(KEY_EXPORTS, (existing + file.absolutePath).takeLast(50).toSet()).apply()
+            prefs.edit().putStringSet(KEY_EXPORTS, (existing + file.absolutePath).toList().takeLast(50).toSet()).apply()
         }
 
         fun recent(context: Context): List<String> =

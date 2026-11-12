@@ -452,9 +452,11 @@ class ProjectRepository(
                 ),
             )
             versionDao.prune(doc.id, keep = 12)
-            File(dir).listFiles()?.filter { f -> f.nameWithoutExtension.toLongOrNull() != null }
-                ?.sortedByDescending { it.nameWithoutExtension.toLong() }
-                ?.drop(12)?.forEach { it.delete() }
+            // Keep at most 12 snapshot files, matching the database prune above.
+            dir.listFiles()
+                ?.sortedByDescending { it.name }
+                ?.drop(12)
+                ?.forEach { stale -> stale.delete() }
         } catch (t: Throwable) {
             ForgeLog.e(TAG, "version snapshot failed", t)
         }
