@@ -80,12 +80,12 @@ fun ColorPickerDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                ColorWheel(hue, saturation, value) { h, s, v ->
+                ColorWheel(hue, saturation, value, onChange = { h, s, v ->
                     hue = h
                     saturation = s
                     value = v
                     hexField = ColorUtils.toHex(ColorUtils.fromHsv(h, s, v, (alpha * 255).toInt()))
-                }
+                })
                 ValueSlider("Value", value, 0f..1f, {
                     value = it
                     hexField = ColorUtils.toHex(ColorUtils.fromHsv(hue, saturation, it, (alpha * 255).toInt()))

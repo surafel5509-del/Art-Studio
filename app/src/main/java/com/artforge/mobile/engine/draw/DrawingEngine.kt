@@ -139,7 +139,7 @@ class DrawingEngine(
             val dist = last.distanceTo(current)
             val step = (settings.size * settings.spacing).coerceAtLeast(0.6f)
             var travelled = strokeLeftovers
-            var prev = last
+            var prev: Pt = last
             var remaining = dist
             while (travelled + remaining >= step) {
                 // Distance from the previous dab, measured along the segment.
