@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="exports" path="exports/" />
+    <cache-path name="frames" path="frames/" />
+    <files-path name="projects" path="projects/" />
+    <cache-path name="shared" path="." />
+</paths>

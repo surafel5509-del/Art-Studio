@@ -1,1 +1,171 @@
-# Art-Studio
+# ArtForge Mobile
+
+A native Android painting, illustration and 2D animation studio. Kotlin + Jetpack Compose,
+custom `Canvas` rendering over `android.graphics`, Room for project metadata, DataStore for
+preferences, WorkManager for background maintenance/export, and the platform media stack for
+video and audio. **No WebView, no remote services, no login** — the app is fully usable in
+airplane mode.
+
+- **Min SDK 29** (Android 10) · target/compile SDK 34
+- Phones, tablets, foldables and stylus input; portrait and landscape
+- Package id `com.artforge.mobile`
+
+---
+
+## Build
+
+```bash
+./gradlew :app:assembleDebug          # installable debug APK
+./gradlew :app:bundleRelease          # release AAB (signed with debug key unless secrets set)
+./gradlew :app:testDebugUnitTest      # JVM + Robolectric unit tests
+./gradlew :app:connectedDebugAndroidTest   # instrumented UI tests (needs a device/emulator)
+```
+
+The Gradle wrapper (8.7) and wrapper jar are committed, so no local Gradle install is needed.
+CI (`.github/workflows/android.yml`) runs unit tests, builds the debug APK and the release AAB,
+and runs instrumented tests on an API 29 emulator.
+
+Release signing: provide `keystore.properties` at the repo root, or the CI secrets
+`ARTFORGE_KEYSTORE_BASE64`, `ARTFORGE_KEYSTORE_PASSWORD`, `ARTFORGE_KEY_ALIAS`,
+`ARTFORGE_KEY_PASSWORD`. Without them the release build is signed with the debug key so the
+pipeline still produces an installable artifact.
+
+---
+
+## What is implemented
+
+### Drawing engine (`engine/draw`)
+- **34 tools**, each performing a real operation: brush, pencil, eraser, pixel eraser, smudge,
+  blur, sharpen, dodge, burn, clone stamp, line, rectangle, rounded rectangle, ellipse, polygon,
+  star, curve, gradient, bezier pen, path, text, perspective snap, bucket fill, magic wand,
+  rect/ellipse/lasso/polygon/marquee selection, eyedropper, move, transform, crop, hand, zoom,
+  canvas rotate.
+- Pressure, tilt and stylus-rotation response; flow vs. opacity; hardness; spacing; scatter;
+  size/colour jitter; dab shapes (round, flat, chisel, square, grain); build-up modes.
+- A 60+ preset brush library across 12 categories with search, favourites and JSON import/export.
+- Strokes are stamped into a separate buffer and merged on lift, which is what makes live
+  preview, exact undo and symmetry cheap.
+- Undo: pixel patches (dirty-rect `IntArray`s) for raster edits and JSON snapshots for structural
+  edits, bounded by both step count and a byte budget.
+- Selection: rect, ellipse, lasso, polygon, magic wand, colour range, plus add/subtract/intersect,
+  feather, expand/contract, invert, fill, move, cut/copy/paste.
+- Symmetry: horizontal, vertical, both, radial and kaleidoscope, drawn through real transforms.
+
+### Layers (`engine/draw/Compositor`)
+Groups with true nesting, clipping masks, layer masks, alpha lock, 20 blend modes
+(including the full `PorterDuff`/`BlendMode` set), opacity, per-layer transforms, colour tags,
+reference layers with tint, merge down, flatten, duplicate.
+
+### Animation (`engine/animation`)
+Frame-by-frame exposure sheet with holds and variable exposure length, per-layer frame
+sequences, onion skin (previous/next counts, opacity, tints), keyframes with linear/ease/hold/bezier
+interpolation, track channels, markers, scenes, inbetweens, 2D bone rigging with two-bone IK,
+pose capture/blend and phoneme→mouth-shape mapping for lip sync.
+
+### Audio (`engine/audio`)
+Waveform peak extraction through `MediaExtractor`/`MediaCodec`, timeline-synced playback with
+`MediaPlayer`, voice-over recording with `MediaRecorder`, WAV trimming.
+
+### Pixel art (`engine/pixel`)
+Bresenham plotting, palette enforcement, nearest-neighbour scaling, colour quantisation,
+sprite-sheet packing/unpacking.
+
+### Vector (`engine/vector`) and comic (`engine/comic`)
+Path construction, anchor editing with bezier handles, transforms, alignment/distribution,
+polygon booleans, SVG export (true paths when vector layers exist, embedded raster otherwise)
+and an SVG path parser (`M L H V C S Q T Z`, absolute + relative). Comic panels: 9 layout
+templates, webtoon strips, bubbles with tails, screentones, speed lines, panel split/merge.
+
+### Effects (`engine/effects`)
+33 effects implemented pixel-wise: blurs (gaussian, motion, radial, directional), sharpen,
+unsharp mask, noise, film grain, pixelate/mosaic, halftone, vignette, glow, bloom, drop/inner
+shadow, outline, emboss, bevel, hue/saturation, brightness/contrast, colour balance, levels,
+curves, threshold, posterize, gradient map, chromatic aberration, distortion, ripple, wave,
+displacement.
+
+### Storage (`data/`)
+- `.artforge` project packages: `manifest.json` + `frames/*.png` + `audio/*` + `thumbnail.png`,
+  written to a `.tmp` file and atomically renamed.
+- Frames are streamed through a size-bounded `FrameStore` cache (sized from the device heap), so a
+  200-frame document never holds every frame in RAM.
+- Room for project metadata, recovery snapshots, version history, assets, brushes and palettes.
+- DataStore for 70+ preferences.
+- Autosave (interval configurable) + crash-recovery snapshots surfaced in a Recovery screen.
+- Import/export through the Storage Access Framework; no broad storage permissions.
+
+### Export (`data/export`)
+- Images: PNG, JPEG, WebP, SVG.
+- Animation: **GIF via an own GIF89a/LZW encoder** (unit-tested byte-for-byte structure),
+  MP4 (H.264) and WebM (VP8) via `MediaCodec` + `MediaMuxer`, PNG-sequence ZIP, sprite sheets.
+- Large exports are handed to an `ExportWorker` so they survive rotation/backgrounding, with
+  progress reported back into the UI.
+
+### UI (`ui/`)
+Responsive studio shell (phone bottom sheets / tablet side inspector), canvas with pinch-zoom,
+two-finger rotate, pan, flip and a real-time brush cursor; colour panel with harmonies and
+built-in palettes; layer panel with nesting; animation timeline with exposure grid, drag-scrub,
+markers and onion-skin controls; export dialog; home screen with templates and recent projects;
+settings for every persisted preference; asset library; help screen listing the real status of
+each feature.
+
+Keyboard shortcuts: `Ctrl+Z` undo, `Ctrl+Shift+Z` redo, `Ctrl+S` save, `Ctrl+O` open, `B` brush,
+`E` eraser, `I` eyedropper, `Space` hand, `←`/`→` previous/next frame, `F5` play/pause,
+`F6` duplicate frame.
+
+---
+
+## Honest status
+
+Everything listed above executes real code on device; there are no decorative buttons or
+simulated results. Known limitations:
+
+| Area | Status |
+| --- | --- |
+| Core painting, layers, selection, undo | Complete |
+| Animation timeline, onion skin, keyframes, rigging | Complete |
+| GIF / MP4 / WebM / PNG-sequence / sprite-sheet export | Complete (hardware encoder quality varies by device) |
+| SVG export | Vector paths when vector layers exist; otherwise the raster composite is embedded |
+| Comic panels & bubbles | Layout, bubbles, tones and lines are implemented; full page-flow pagination is basic |
+| Colour management | sRGB throughout; no ICC profile conversion or CMYK soft-proofing |
+| Collaboration / cloud sync | Not implemented (deliberately offline) |
+| Tablet multi-window / foldable hinge-aware layout | Responsive layout only; no hinge-specific pane splitting |
+
+The in-app **Help → Feature status** screen mirrors this table.
+
+---
+
+## Architecture
+
+Single Gradle module with strict package layering (kept single-module so CI stays fast and
+reproducible):
+
+```
+core/     model, colour maths, geometry/interpolation, logging
+engine/   draw (FrameStore, DrawingEngine, Compositor, Undo, Selection, Brushes)
+          animation, effects, vector, pixel, comic, perspective, audio
+data/     db (Room), project (serializer + repository), settings (DataStore),
+          asset, export (engine, GIF encoder, worker glue), imports
+ui/       theme, common controls, home, studio, settings, assets, navigation
+work/     WorkManager maintenance + export workers
+```
+
+MVVM + repository: Compose screens observe `StudioState`/`StateFlow` from view models; all disk and
+bitmap-heavy work runs on `Dispatchers.IO`; the Application acts as the explicit dependency
+container (no annotation-processor DI, which keeps build times down).
+
+---
+
+## Tests
+
+- `app/src/test` — JVM + Robolectric: colour maths, interpolation/geometry, animation timeline,
+  drawing engine (real pixel assertions: strokes, pressure, eraser, symmetry, fill, gradients,
+  undo patches, frame persistence, selections, magic wand), project storage round-trips
+  (manifest, frames, Room metadata, autosave/recovery, duplication, migration), GIF encoder
+  structure, vector/comic/pixel/effects/rig/perspective engines, layer mutator and canvas
+  transform maths.
+- `app/src/androidTest` — instrumented Compose tests against the real `MainActivity`: home
+  screen, settings, help, and creating a project into the studio.
+
+## License
+
+No license file is included yet; add one before distributing binaries.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ArtForge" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/forge_charcoal</item>
+    </style>
+
+    <style name="Theme.ArtForge.Splash" parent="Theme.ArtForge">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>
