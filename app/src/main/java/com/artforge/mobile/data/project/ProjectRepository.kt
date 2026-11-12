@@ -6,6 +6,7 @@ import android.net.Uri
 import com.artforge.mobile.core.model.AnimationConfig
 import com.artforge.mobile.core.model.DocumentSettings
 import com.artforge.mobile.core.model.FrameMeta
+import com.artforge.mobile.core.model.FrameRef
 import com.artforge.mobile.core.model.Layer
 import com.artforge.mobile.core.model.LayerKind
 import com.artforge.mobile.core.model.PixelConfig
@@ -87,7 +88,7 @@ class ProjectRepository(
                 val animLayer = baseLayer.copy(
                     name = "Anim Layer 1",
                     kind = LayerKind.Animation,
-                    frames = listOf(com.artforge.mobile.core.model.FrameRef(frameId, 0.0)),
+                    frames = listOf(FrameRef(frameId, 0.0)),
                     activeFrameId = frameId,
                 )
                 ProjectDocument(
@@ -114,7 +115,13 @@ class ProjectRepository(
                     title = title,
                     kind = kind,
                     settings = settings.copy(width = width, height = height, transparentBackground = true),
-                    layers = listOf(baseLayer.copy(name = "Pixels", activeFrameId = frameId)),
+                    layers = listOf(
+                        baseLayer.copy(
+                            name = "Pixels",
+                            activeFrameId = frameId,
+                            frames = listOf(FrameRef(frameId, 0.0)),
+                        ),
+                    ),
                     activeLayerId = baseLayer.id,
                     pixel = PixelConfig(tileWidth = width, tileHeight = height),
                     createdAt = now,
@@ -128,7 +135,13 @@ class ProjectRepository(
                     title = title,
                     kind = kind,
                     settings = settings,
-                    layers = listOf(baseLayer.copy(name = "Page 1", activeFrameId = frameId)),
+                    layers = listOf(
+                        baseLayer.copy(
+                            name = "Page 1",
+                            activeFrameId = frameId,
+                            frames = listOf(FrameRef(frameId, 0.0)),
+                        ),
+                    ),
                     activeLayerId = baseLayer.id,
                     pages = listOf(com.artforge.mobile.core.model.ComicPage(index = 0)),
                     createdAt = now,
@@ -136,12 +149,20 @@ class ProjectRepository(
                 )
             }
             else -> {
+                // Illustrations/designs still need a drawing surface: without an
+                // active frame the canvas would have nothing to paint on.
+                val frameId = UUID.randomUUID().toString()
                 ProjectDocument(
                     id = newProjectId(),
                     title = title,
                     kind = kind,
                     settings = settings,
-                    layers = listOf(baseLayer),
+                    layers = listOf(
+                        baseLayer.copy(
+                            activeFrameId = frameId,
+                            frames = listOf(FrameRef(frameId, 0.0)),
+                        ),
+                    ),
                     activeLayerId = baseLayer.id,
                     createdAt = now,
                     modifiedAt = now,
@@ -496,12 +517,14 @@ class ProjectRepository(
             modifiedAt = System.currentTimeMillis(),
         )
         registerProject(copy)
-        // Copy every drawing's pixels to the new project id.
+        // Copy every drawing's pixels into the new project's own frame directory.
+        val width = doc.settings.width
+        val height = doc.settings.height
         doc.layers.forEach { layer ->
             val ids = (layer.frames.map { it.frameId } + listOfNotNull(layer.activeFrameId, layer.maskFrameId)).distinct()
             ids.forEach { frameId ->
-                frameStore.registerFrame(doc.id, frameId)
-                frameStore.duplicateFrame(doc.id, frameId, frameId, doc.settings.width, doc.settings.height)
+                frameStore.registerFrame(copy.id, frameId)
+                frameStore.duplicateFrame(copy.id, frameId, frameId, width, height)
             }
         }
         frameStore.flushAll(copy.id)

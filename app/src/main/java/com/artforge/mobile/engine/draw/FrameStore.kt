@@ -109,8 +109,21 @@ class FrameStore(
         val temp = File(target.absolutePath + ".tmp")
         try {
             target.parentFile?.mkdirs()
+            val translucent = hasTranslucentPixels(bitmap)
             FileOutputStream(temp).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                if (translucent) {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                } else {
+                    // Fully opaque frame: flatten onto white before encoding so the
+                    // stored PNG is byte-identical to what the user sees, independent
+                    // of how the source bitmap's alpha channel was set up.
+                    val flat = createBlank(bitmap.width, bitmap.height)
+                    val canvas = Canvas(flat)
+                    canvas.drawColor(Color.WHITE)
+                    canvas.drawBitmap(bitmap, 0f, 0f, Paint().apply { isAntiAlias = false })
+                    flat.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    flat.recycle()
+                }
                 out.flush()
             }
             if (target.exists()) target.delete()
@@ -121,6 +134,18 @@ class FrameStore(
         } catch (t: Throwable) {
             ForgeLog.e(TAG, "failed writing frame $frameId", t)
         }
+    }
+
+    private fun hasTranslucentPixels(bitmap: Bitmap): Boolean {
+        val w = bitmap.width
+        val h = bitmap.height
+        val step = max(1, min(w, h) / 128)
+        for (y in 0 until h step step) {
+            for (x in 0 until w step step) {
+                if (Color.alpha(bitmap.getPixel(x, y)) < 255) return true
+            }
+        }
+        return false
     }
 
     /** Persists a bitmap that is not part of the cache (used by composite/export paths). */
@@ -140,7 +165,10 @@ class FrameStore(
     /** Duplicates [sourceFrameId] into [newFrameId] without keeping either in RAM long. */
     fun duplicateFrame(projectId: String, sourceFrameId: String, newFrameId: String, width: Int, height: Int) {
         val src = load(projectId, sourceFrameId, width, height)
-        val copy = src.copy(Bitmap.Config.ARGB_8888, true)
+        // Clone explicitly: Bitmap.copy may return the same instance for immutable
+        // bitmaps, which would make the "copy" share pixels with the source.
+        val copy = createBlank(width, height)
+        Canvas(copy).drawBitmap(src, 0f, 0f, Paint().apply { isAntiAlias = false })
         synchronized(lock) {
             cache[newFrameId]?.let { cachedBytes -= it.bitmap.byteCount }
             cache[newFrameId] = Entry(copy, dirty = true, lastUsed = System.nanoTime())
@@ -148,6 +176,20 @@ class FrameStore(
             thumbs.remove(newFrameId)
             evictIfNeeded()
         }
+    }
+
+    /**
+     * A mutable copy of the frame as it currently is in memory.
+     *
+     * Used wherever a second bitmap is needed next to a cached frame (live stroke
+     * preview, thumbnails): operations like `Bitmap.copy` can hand back the *same*
+     * instance, so an explicit Canvas clone guarantees the original is untouched.
+     */
+    fun liveCopy(projectId: String, frameId: String, width: Int, height: Int): Bitmap {
+        val source = load(projectId, frameId, width, height)
+        val copy = createBlank(width, height)
+        Canvas(copy).drawBitmap(source, 0f, 0f, Paint().apply { isAntiAlias = false })
+        return copy
     }
 
     fun deleteFrame(projectId: String, frameId: String) {
@@ -241,7 +283,9 @@ class FrameStore(
 
         fun createBlank(width: Int, height: Int, fill: Int = Color.TRANSPARENT): Bitmap {
             val bmp = Bitmap.createBitmap(max(1, width), max(1, height), Bitmap.Config.ARGB_8888)
-            if (fill != Color.TRANSPARENT) bmp.eraseColor(fill)
+            // Always clear: freshly allocated bitmaps are not guaranteed to be zeroed,
+            // and a "blank" frame must never carry stale pixels.
+            bmp.eraseColor(fill)
             return bmp
         }
 

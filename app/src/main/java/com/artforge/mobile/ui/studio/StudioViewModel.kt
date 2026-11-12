@@ -2099,9 +2099,9 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
         // Live stroke buffer: composite the in-progress stroke above the frame.
         val strokeBitmap = if (drawingEngine.isStrokeActive && frameId != null) {
-            val target = frameStore.load(doc.id, frameId, doc.settings.width, doc.settings.height)
-            val buffer = Bitmap.createBitmap(doc.settings.width, doc.settings.height, Bitmap.Config.ARGB_8888)
-            android.graphics.Canvas(buffer).drawBitmap(target, 0f, 0f, null)
+            // A fresh clone of the live frame so the in-progress stroke can be drawn
+            // on top without touching the layer the engine is painting into.
+            val buffer = frameStore.liveCopy(doc.id, frameId, doc.settings.width, doc.settings.height)
             buffer
         } else null
 

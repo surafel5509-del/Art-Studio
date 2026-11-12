@@ -199,9 +199,10 @@ class EngineExtrasTest {
     @Test
     fun `text wrapping respects the maximum width`() {
         val paint = android.graphics.Paint().apply { textSize = 20f }
-        val lines = ComicEngine.wrapText("one two three four five six seven", paint, 80f)
+        // A single unbreakable word must be split by characters, not left overflowing.
+        val lines = ComicEngine.wrapText("one two three supercalifragilistic seven", paint, 80f)
         assertTrue(lines.size > 1)
-        assertTrue(lines.all { paint.measureText(it) <= 90f })
+        assertTrue(lines.all { paint.measureText(it) <= 80f })
     }
 
     // ---- vector ----------------------------------------------------------

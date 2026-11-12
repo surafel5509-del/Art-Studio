@@ -65,7 +65,9 @@ class DrawingEngineTest {
         target: Bitmap,
         from: Pt,
         to: Pt,
-        settings: BrushSettings = BrushSettings(size = 12f, spacing = 0.1f),
+        // A fully hard brush keeps the test deterministic: soft brushes rely on
+        // BlurMaskFilter, which is a rendering detail rather than stroke geometry.
+        settings: BrushSettings = BrushSettings(size = 12f, spacing = 0.1f, hardness = 1f),
         color: Int = Color.BLACK,
         tool: ToolId = ToolId.Brush,
         steps: Int = 12,
@@ -91,11 +93,12 @@ class DrawingEngineTest {
     fun `pressure changes the stroke width`() {
         val thin = blank()
         val thick = blank()
-        val settings = BrushSettings(size = 24f, pressureSize = 1f, spacing = 0.1f)
+        val settings = BrushSettings(size = 24f, pressureSize = 1f, spacing = 0.1f, hardness = 1f)
 
         engine.beginStroke(thin, ToolId.Brush, Color.BLACK, settings, StrokePoint(20f, 100f, 0.1f))
         for (i in 1..10) engine.moveTo(StrokePoint(20f + i * 16f, 100f, 0.1f))
         engine.endStroke()
+        assertTrue("light pressure must still paint (${countOpaque(thin)})", countOpaque(thin) > 200)
 
         engine.beginStroke(thick, ToolId.Brush, Color.BLACK, settings, StrokePoint(20f, 100f, 1f))
         for (i in 1..10) engine.moveTo(StrokePoint(20f + i * 16f, 100f, 1f))
@@ -103,6 +106,7 @@ class DrawingEngineTest {
 
         val thinCount = countOpaque(thin)
         val thickCount = countOpaque(thick)
+        assertTrue("full pressure must paint (${countOpaque(thick)})", thickCount > 200)
         assertTrue("thick ($thickCount) should cover more than thin ($thinCount)", thickCount > thinCount * 2)
     }
 
