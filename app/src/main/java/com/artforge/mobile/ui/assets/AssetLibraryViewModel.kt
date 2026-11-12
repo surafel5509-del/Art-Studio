@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.artforge.mobile.ArtForgeApplication
 import com.artforge.mobile.data.asset.AssetCategory
+import com.artforge.mobile.data.asset.AssetLibrary
 import com.artforge.mobile.data.db.AssetEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

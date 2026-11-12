@@ -135,25 +135,27 @@ class DrawingEngine(
         } else {
             // Interpolate from the previous dab to the current input point so fast
             // strokes stay continuous instead of showing gaps.
-            val dist = last.distanceTo(Pt(point.x, point.y))
+            val current = Pt(point.x, point.y)
+            val dist = last.distanceTo(current)
             val step = (settings.size * settings.spacing).coerceAtLeast(0.6f)
             var travelled = strokeLeftovers
             var prev = last
             var remaining = dist
             while (travelled + remaining >= step) {
-                val need = step - travelled
-                val t = if (dist <= 0.0001f) 1f else (prev.distanceTo(last) + need).coerceAtMost(dist) / dist
-                val nx = prev.x + (point.x - last.x) * t
-                val ny = prev.y + (point.y - last.y) * t
-                pts.add(Pt(nx, ny))
-                prev = Pt(nx, ny)
-                remaining -= need
+                // Distance from the previous dab, measured along the segment.
+                val fromPrev = prev.distanceTo(current)
+                val t = if (fromPrev <= 0.0001f) 1f else ((step - travelled) / fromPrev).coerceIn(0f, 1f)
+                val nx = prev.x + (current.x - prev.x) * t
+                val ny = prev.y + (current.y - prev.y) * t
+                val placed = Pt(nx, ny)
+                pts.add(placed)
+                prev = placed
+                remaining = placed.distanceTo(current)
                 travelled = 0f
             }
             strokeLeftovers = travelled + remaining
             if (pts.isEmpty()) {
-                // Not enough travel for a dab yet; still remember the raw point for
-                // smoothing/timestamp based effects.
+                // Not enough travel for a dab yet; the next move will catch up.
                 return
             }
         }

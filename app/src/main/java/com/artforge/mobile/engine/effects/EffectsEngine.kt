@@ -469,7 +469,7 @@ object EffectsEngine {
         val canvas = Canvas(out)
         val paint = Paint().apply {
             alpha = (amount.coerceIn(0f, 1f) * 230).toInt()
-            blendMode = BlendMode.ADD
+            blendMode = BlendMode.PLUS
         }
         canvas.drawBitmap(blurred, 0f, 0f, paint)
         blurred.recycle()
@@ -697,9 +697,9 @@ object EffectsEngine {
         val g = tintChannel(source, 0xFF00FF00.toInt())
         val b = tintChannel(source, 0xFF0000FF.toInt())
         val dx = shift * amount
-        canvas.drawBitmap(r, -dx, 0f, Paint().apply { blendMode = BlendMode.ADD })
-        canvas.drawBitmap(g, 0f, 0f, Paint().apply { blendMode = BlendMode.ADD })
-        canvas.drawBitmap(b, dx, 0f, Paint().apply { blendMode = BlendMode.ADD })
+        canvas.drawBitmap(r, -dx, 0f, Paint().apply { blendMode = BlendMode.PLUS })
+        canvas.drawBitmap(g, 0f, 0f, Paint().apply { blendMode = BlendMode.PLUS })
+        canvas.drawBitmap(b, dx, 0f, Paint().apply { blendMode = BlendMode.PLUS })
         r.recycle(); g.recycle(); b.recycle()
         return out
     }
