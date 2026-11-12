@@ -1,4 +1,7 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.artforge.mobile.ui.studio
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

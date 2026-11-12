@@ -196,7 +196,7 @@ class CanvasRenderer(
             RectF(bounds.left * scaleX, bounds.top * scaleY, bounds.right * scaleX, bounds.bottom * scaleY),
             outline,
         )
-        val dark = Paint(outline).apply { color = 0x88000000; pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 8f) }
+        val dark = Paint(outline).apply { color = 0x88000000.toInt(); pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 8f) }
         canvas.drawRect(
             RectF(bounds.left * scaleX, bounds.top * scaleY, bounds.right * scaleX, bounds.bottom * scaleY),
             dark,
@@ -298,8 +298,8 @@ class CanvasRenderer(
             var x = offsetX - viewWidth / 2f - panX
             var y = offsetY - viewHeight / 2f - panY
             val rad = Math.toRadians(-rotation.toDouble())
-            val rx = x * kotlin.math.cos(rad) - y * kotlin.math.sin(rad)
-            val ry = x * kotlin.math.sin(rad) + y * kotlin.math.cos(rad)
+            val rx = (x * kotlin.math.cos(rad) - y * kotlin.math.sin(rad)).toFloat()
+            val ry = (x * kotlin.math.sin(rad) + y * kotlin.math.cos(rad)).toFloat()
             x = rx
             y = ry
             if (flipHorizontal) x = -x
