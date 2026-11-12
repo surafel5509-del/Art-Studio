@@ -197,7 +197,23 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Hardware virtualisation is not guaranteed on hosted runners. Without it the
+      # emulator dies during launch and no test output is produced at all, so detect
+      # it up front rather than reporting a bogus test failure.
+      - name: Check hardware acceleration
+        id: kvm
+        run: |
+          if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "KVM is available"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::/dev/kvm is not usable on this runner — instrumented tests skipped"
+          fi
+
       - name: Run instrumented tests
+        id: instrumented
+        if: steps.kvm.outputs.available == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -224,7 +240,7 @@ jobs:
             ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain >> instrumented.log 2>&1
 
       - name: Report instrumentation diagnostics
-        if: failure()
+        if: failure() && steps.instrumented.outcome == 'failure'
         run: |
           emit() {
             clean=${1//'%'/'%25'}
