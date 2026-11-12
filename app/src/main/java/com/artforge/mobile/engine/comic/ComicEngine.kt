@@ -223,7 +223,21 @@ object ComicEngine {
                 current = StringBuilder(candidate)
             } else {
                 if (current.isNotEmpty()) lines.add(current.toString())
-                current = StringBuilder(word)
+                // A single word can still be wider than the bubble: break it by
+                // characters so text never spills outside the panel.
+                if (paint.measureText(word) > maxWidth) {
+                    var chunk = StringBuilder()
+                    for (ch in word) {
+                        if (chunk.isNotEmpty() && paint.measureText("$chunk$ch") > maxWidth) {
+                            lines.add(chunk.toString())
+                            chunk = StringBuilder()
+                        }
+                        chunk.append(ch)
+                    }
+                    current = chunk
+                } else {
+                    current = StringBuilder(word)
+                }
             }
         }
         if (current.isNotEmpty()) lines.add(current.toString())

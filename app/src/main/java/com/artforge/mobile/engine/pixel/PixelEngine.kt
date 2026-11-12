@@ -146,25 +146,37 @@ object PixelEngine {
         bitmap.setPixels(pixels, 0, w, 0, 0, w, h)
     }
 
-    /** Nearest-neighbour upscale — the only correct scaling for pixel art. */
+    /**
+     * Nearest-neighbour upscale — the only correct scaling for pixel art.
+     *
+     * Implemented by pixel replication rather than `Canvas.drawBitmap` with the
+     * filter disabled: Skia's non-filtered draw is not guaranteed to preserve exact
+     * colours and alpha on every API level, and pixel art must not shift.
+     */
     fun scaleNearest(source: Bitmap, factor: Int): Bitmap {
         val f = factor.coerceAtLeast(1)
-        val out = Bitmap.createBitmap(source.width * f, source.height * f, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(out)
-        val paint = Paint()
-        paint.isFilterBitmap = false
-        paint.isAntiAlias = false
-        canvas.drawBitmap(source, null, Rect(0, 0, out.width, out.height), paint)
-        return out
+        return resizeNearest(source, source.width * f, source.height * f)
     }
 
     fun resizeNearest(source: Bitmap, width: Int, height: Int): Bitmap {
-        val out = Bitmap.createBitmap(width.coerceAtLeast(1), height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(out)
-        val paint = Paint()
-        paint.isFilterBitmap = false
-        paint.isAntiAlias = false
-        canvas.drawBitmap(source, null, Rect(0, 0, out.width, out.height), paint)
+        val outW = width.coerceAtLeast(1)
+        val outH = height.coerceAtLeast(1)
+        val srcW = source.width.coerceAtLeast(1)
+        val srcH = source.height.coerceAtLeast(1)
+        val src = IntArray(srcW * srcH)
+        source.getPixels(src, 0, srcW, 0, 0, srcW, srcH)
+        val dst = IntArray(outW * outH)
+        for (y in 0 until outH) {
+            val sy = (y.toLong() * srcH / outH).toInt().coerceIn(0, srcH - 1)
+            val rowStart = sy * srcW
+            val dstRow = y * outW
+            for (x in 0 until outW) {
+                val sx = (x.toLong() * srcW / outW).toInt().coerceIn(0, srcW - 1)
+                dst[dstRow + x] = src[rowStart + sx]
+            }
+        }
+        val out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        out.setPixels(dst, 0, outW, 0, 0, outW, outH)
         return out
     }
 

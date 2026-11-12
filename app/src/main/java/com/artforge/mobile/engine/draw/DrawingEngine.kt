@@ -174,16 +174,15 @@ class DrawingEngine(
         if (target != null && buffer != null) {
             val canvas = Canvas(target)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-            when {
-                activeTool == ToolId.Eraser || activeTool == ToolId.PixelEraser -> {
+            when (activeTool) {
+                // Erasers clear coverage where the stroke buffer has pigment.
+                ToolId.Eraser, ToolId.PixelEraser ->
                     paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
-                }
-                buffer.hasAlpha() -> Unit
-            }
-            if (activeTool == ToolId.Smudge || activeTool == ToolId.Blur || activeTool == ToolId.Sharpen) {
-                // These tools write directly into the target bitmap.
-            } else {
-                canvas.drawBitmap(buffer, 0f, 0f, paint)
+                // The effect tools (smudge/blur/sharpen/dodge/burn/clone) already wrote
+                // their result straight into the layer, so the buffer must not be merged.
+                ToolId.Smudge, ToolId.Blur, ToolId.Sharpen, ToolId.Dodge, ToolId.Burn,
+                ToolId.CloneStamp -> Unit
+                else -> canvas.drawBitmap(buffer, 0f, 0f, paint)
             }
             target.setHasAlpha(true)
         }

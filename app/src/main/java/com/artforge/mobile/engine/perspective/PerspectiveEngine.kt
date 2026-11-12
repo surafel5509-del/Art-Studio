@@ -85,12 +85,12 @@ object PerspectiveEngine {
                 best = snapped
             }
         }
-        if (kotlin.math.abs(point.y - guide.horizonY) < tolerance) {
-            val dist = kotlin.math.abs(point.y - guide.horizonY)
-            if (dist < bestDist) {
-                bestDist = dist
-                best = Pt(point.x, guide.horizonY)
-            }
+        // The horizon itself is a snap target: it is checked first and wins ties,
+        // because "align to the horizon" is the most common artistic intent.
+        val horizonDist = kotlin.math.abs(point.y - guide.horizonY)
+        if (horizonDist <= tolerance && horizonDist <= bestDist) {
+            bestDist = horizonDist
+            best = Pt(point.x, guide.horizonY)
         }
         return best
     }
