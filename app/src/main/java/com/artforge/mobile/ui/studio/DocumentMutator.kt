@@ -215,8 +215,8 @@ object DocumentMutator {
             val dx = x - px
             val dy = y - py
             val rad = Math.toRadians(t.rotationDeg.toDouble())
-            val rx = dx * kotlin.math.cos(rad) - dy * kotlin.math.sin(rad)
-            val ry = dx * kotlin.math.sin(rad) + dy * kotlin.math.cos(rad)
+            val rx = (dx * kotlin.math.cos(rad) - dy * kotlin.math.sin(rad)).toFloat()
+            val ry = (dx * kotlin.math.sin(rad) + dy * kotlin.math.cos(rad)).toFloat()
             Pair(px + rx * t.scaleX + t.translateX, py + ry * t.scaleY + t.translateY)
         }
         return RectF2(
