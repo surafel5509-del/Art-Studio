@@ -65,6 +65,13 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # Promoted from secrets so the step-level `if` can test emptiness:
+      # the `secrets` context is not available in step `if` expressions.
+      KEYSTORE_BASE64: ${{ secrets.ARTFORGE_KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.ARTFORGE_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ARTFORGE_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.ARTFORGE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,16 +87,14 @@ jobs:
           gradle-version: "8.7"
 
       - name: Restore release keystore
-        if: ${{ secrets.ARTFORGE_KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ARTFORGE_KEYSTORE_BASE64 }}
+        if: env.KEYSTORE_BASE64 != ''
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/artforge-release.jks"
           cat > keystore.properties <<EOF
           storeFile=$RUNNER_TEMP/artforge-release.jks
-          storePassword=${{ secrets.ARTFORGE_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ARTFORGE_KEY_ALIAS }}
-          keyPassword=${{ secrets.ARTFORGE_KEY_PASSWORD }}
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
           EOF
 
       - name: Assemble debug APK
