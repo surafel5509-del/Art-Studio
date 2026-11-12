@@ -206,14 +206,16 @@ jobs:
           profile: pixel_3a
           disable-animations: true
           # Keep the raw log so a failure can be read as a check-run annotation.
+          # Emulator boots on shared runners are flaky, so the suite gets one retry;
+          # a genuine test failure fails both attempts and is reported below.
           script: |
-            set -o pipefail
-            ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain || {
-              # Emulator boots on older runners are flaky; one retry distinguishes a
-              # real test failure from an ADB/emulator hiccup.
-              echo "first attempt failed, retrying once"
-              ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain
-            }
+            if ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain > instrumented.log 2>&1; then
+              tail -40 instrumented.log
+              exit 0
+            fi
+            echo "first attempt failed, retrying once"
+            tail -60 instrumented.log
+            ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain >> instrumented.log 2>&1
 
       - name: Report instrumentation diagnostics
         if: failure()
@@ -224,7 +226,12 @@ jobs:
             clean=${clean//$'\n'/'%0A'}
             echo "::error::${clean:0:900}"
           }
-          grep -E "^e: |FAILED|Error|Exception" instrumented.log | head -20 | while IFS= read -r line; do emit "$line"; done
+          if [ -f instrumented.log ]; then
+            grep -E "^e: |FAILED|Error|Exception|Installation|INSTALL_" instrumented.log \
+              | head -20 | while IFS= read -r line; do emit "$line"; done
+          else
+            emit "instrumented.log missing: the emulator/Gradle step failed before tests ran"
+          fi
           python3 - <<'PYEOF'
           import glob, xml.etree.ElementTree as ET
           for f in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
