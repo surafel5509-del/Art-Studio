@@ -74,6 +74,15 @@ class DrawingEngine(
     private var activeColor: Argb = Color.BLACK
     var activeTool: ToolId = ToolId.Brush
         private set
+
+    /**
+     * True while the engine only accumulates dabs in the offscreen buffer and the
+     * caller decides when to commit them via [commitToTarget]. The view model needs
+     * this so dodge/burn can post-process the committed pixels exactly once.
+     */
+    private var previewOnly: Boolean = false
+    private val liveMergePaint = Paint().apply { isAntiAlias = false }
+
     private var lastDab: Pt? = null
     private var strokeLeftovers = 0f
     private var strokeBounds: RectF2? = null
