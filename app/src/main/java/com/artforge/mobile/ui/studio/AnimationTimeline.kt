@@ -246,6 +246,12 @@ fun AnimationTimeline(
                                 .width((frameCount * cellWidth).dp)
                                 .height(22.dp),
                         ) {
+                            // One Paint for the whole pass: allocating inside the per-frame
+                            // loop was the hottest allocation in the timeline.
+                            val tickPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                                color = 0xFF9AA3B2.toInt()
+                                textSize = 9.dp.toPx()
+                            }
                             val w = cellWidth.dp.toPx()
                             for (f in 0 until frameCount) {
                                 val x = f * w
@@ -259,10 +265,7 @@ fun AnimationTimeline(
                                         "${f + 1}",
                                         x + 3f,
                                         size.height * 0.7f,
-                                        android.graphics.Paint().apply {
-                                            color = 0xFF9AA3B2.toInt()
-                                            textSize = 9.dp.toPx()
-                                        },
+                                        tickPaint,
                                     )
                                 } else {
                                     drawRect(
@@ -280,13 +283,16 @@ fun AnimationTimeline(
                             val refs = remember(layer) { layer.frames.sortedBy { it.offset } }
                             Canvas(
                                 Modifier
-                                    .fillMaxWidth()
                                     .height(34.dp)
-                                    .horizontalScroll(horizontal)
                                     .width((frameCount * cellWidth).dp)
+                                    .horizontalScroll(horizontal)
                                     .pointerInput(layer.id, cellWidth, frameCount) {
                                         detectTapGestures { offset ->
-                                            val frame = (offset.x / size.width * frameCount).toInt().coerceIn(0, frameCount - 1)
+                                            // The row is scrolled: convert to content space first,
+                                            // then to a frame index using the real cell width.
+                                            val contentX = offset.x + horizontal.value
+                                            val frame = (contentX / cellWidth.dp.toPx())
+                                                .toInt().coerceIn(0, frameCount - 1)
                                             vm.selectLayer(layer.id)
                                             vm.setFrame(frame)
                                         }
@@ -353,13 +359,17 @@ fun AnimationTimeline(
                     }
                 }
 
-                // Playhead overlay + scrub area
+                // Scrub area over the frame grid. The grid is horizontally scrollable,
+                // so the touch x is offset by the scroll position before converting to
+                // a frame number; otherwise scrubbing lands on the wrong frame when
+                // the timeline is scrolled.
                 Box(
                     Modifier
                         .fillMaxSize()
                         .pointerInput(cellWidth, frameCount) {
                             detectDragGestures { change, _ ->
-                                val frame = (change.position.x / size.width * frameCount).toInt()
+                                val cellPx = cellWidth.dp.toPx()
+                                val frame = ((change.position.x + horizontal.value) / cellPx).toInt()
                                 vm.setFrame(frame.coerceIn(0, frameCount - 1))
                             }
                         },
