@@ -1,6 +1,7 @@
 package com.artforge.mobile.data.project
 
 import com.artforge.mobile.core.model.AnimationConfig
+import com.artforge.mobile.core.model.AnimationConfig as AnimCfg
 import com.artforge.mobile.core.model.DocumentSettings
 import com.artforge.mobile.core.model.Layer
 import com.artforge.mobile.core.model.ProjectDocument

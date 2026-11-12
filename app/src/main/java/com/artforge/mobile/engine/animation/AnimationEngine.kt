@@ -99,7 +99,7 @@ object AnimationEngine {
     /** True when [frame] holds the drawing of an earlier frame. */
     fun isHoldFrame(config: AnimationConfig, layer: Layer, frame: Int): Boolean {
         val ref = layer.frames.firstOrNull { floor(it.offset).toInt() == frame } ?: return true
-        return ref.offset != floor(ref.offset).toFloat() && ref.offset > frame
+        return ref.offset != floor(ref.offset) && ref.offset > frame
     }
 
     fun drawingFrames(layer: Layer): List<Int> = layer.frames.map { floor(it.offset).toInt() }.sorted()
@@ -144,9 +144,9 @@ object AnimationEngine {
         val shiftedOffsets = without.map { ref ->
             when {
                 floor(ref.offset).toInt() > fromFrame && floor(ref.offset).toInt() < toFrame ->
-                    ref.copy(offset = floor(ref.offset).toInt() - 1)
+                    ref.copy(offset = (floor(ref.offset).toInt() - 1).toDouble())
                 floor(ref.offset).toInt() <= fromFrame && floor(ref.offset).toInt() >= toFrame ->
-                    ref.copy(offset = floor(ref.offset).toInt() + 1)
+                    ref.copy(offset = (floor(ref.offset).toInt() + 1).toDouble())
                 else -> ref
             }
         }

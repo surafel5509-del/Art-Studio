@@ -168,10 +168,13 @@ class AudioEngine(private val context: Context) {
             ForgeLog.e(TAG, "waveform extraction failed for ${file.name}", t)
             // Fall back to a lightweight player-based duration with an empty waveform.
             try {
-                MediaPlayer().use { mp ->
+                val mp = MediaPlayer()
+                try {
                     mp.setDataSource(file.absolutePath)
                     mp.prepare()
                     WaveformData(FloatArray(buckets), mp.duration.toLong(), 44100, 2)
+                } finally {
+                    runCatching { mp.release() }
                 }
             } catch (_: Throwable) {
                 null
