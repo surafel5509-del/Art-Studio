@@ -32,9 +32,9 @@ import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -211,7 +211,7 @@ fun HomeScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SmallAction("Settings", Icons.Filled.Settings, onOpenSettings)
                     SmallAction("Assets", Icons.Filled.Collections, onOpenAssets)
-                    SmallAction("Help", Icons.Filled.Help, onOpenHelp)
+                    SmallAction("Help", Icons.AutoMirrored.Filled.Help, onOpenHelp)
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -261,7 +261,7 @@ private fun CreateActionsGrid(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CreateCard("New comic", "Panels & bubbles", Icons.Filled.MenuBook, Color(0xFF4CD9A0), Modifier.weight(1f)) {
+            CreateCard("New comic", "Panels & bubbles", Icons.AutoMirrored.Filled.MenuBook, Color(0xFF4CD9A0), Modifier.weight(1f)) {
                 onNew(ProjectKind.Comic)
             }
             CreateCard("New pixel art", "Sprites & tiles", Icons.Filled.GridOn, Color(0xFF8A4FFF), Modifier.weight(1f)) {
@@ -380,7 +380,7 @@ private fun ProjectCard(
                 Icon(
                     when (project.kind) {
                         ProjectKind.Animation -> Icons.Filled.Animation
-                        ProjectKind.Comic -> Icons.Filled.MenuBook
+                        ProjectKind.Comic -> Icons.AutoMirrored.Filled.MenuBook
                         ProjectKind.PixelArt -> Icons.Filled.GridOn
                         else -> Icons.Filled.Palette
                     },

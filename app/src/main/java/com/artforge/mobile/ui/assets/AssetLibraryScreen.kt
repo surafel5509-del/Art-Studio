@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -65,7 +65,7 @@ fun AssetLibraryScreen(onBack: () -> Unit, vm: AssetLibraryViewModel = viewModel
 
     Column(Modifier.fillMaxSize().background(ForgeColors.Charcoal)) {
         Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = ForgeColors.TextPrimary) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = ForgeColors.TextPrimary) }
             Text("Asset library", style = MaterialTheme.typography.titleLarge, color = ForgeColors.TextPrimary)
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { importLauncher.launch(arrayOf("image/*", "application/octet-stream")) }) {

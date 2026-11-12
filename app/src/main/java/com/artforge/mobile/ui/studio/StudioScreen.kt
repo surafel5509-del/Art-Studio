@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
@@ -30,10 +30,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -345,7 +345,7 @@ private fun StudioTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = ForgeColors.TextPrimary)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ForgeColors.TextPrimary)
         }
         Column(Modifier.weight(1f).clickable {
             titleDraft = state.document?.title ?: "Untitled"
@@ -381,10 +381,10 @@ private fun StudioTopBar(
             )
         }
         IconButton(onClick = onUndo, enabled = state.canUndo) {
-            Icon(Icons.Filled.Undo, "Undo", tint = if (state.canUndo) ForgeColors.TextPrimary else ForgeColors.TextMuted)
+            Icon(Icons.AutoMirrored.Filled.Undo, "Undo", tint = if (state.canUndo) ForgeColors.TextPrimary else ForgeColors.TextMuted)
         }
         IconButton(onClick = onRedo, enabled = state.canRedo) {
-            Icon(Icons.Filled.Redo, "Redo", tint = if (state.canRedo) ForgeColors.TextPrimary else ForgeColors.TextMuted)
+            Icon(Icons.AutoMirrored.Filled.Redo, "Redo", tint = if (state.canRedo) ForgeColors.TextPrimary else ForgeColors.TextMuted)
         }
         IconButton(onClick = onSave) {
             Icon(Icons.Filled.Save, "Save", tint = ForgeColors.TextPrimary)
