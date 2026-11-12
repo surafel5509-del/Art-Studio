@@ -208,7 +208,6 @@ jobs:
           # The emulator takes several minutes to boot and install the APK; without a
           # generous limit the runner kills it before any test output is produced.
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           # Keep the raw log so a failure can be read as a check-run annotation.
           # Emulator boots on shared runners are flaky, so the suite gets one retry;
           # a genuine test failure fails both attempts and is reported below.
