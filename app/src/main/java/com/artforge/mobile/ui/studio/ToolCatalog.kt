@@ -1,7 +1,7 @@
 package com.artforge.mobile.ui.studio
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AltRoute
+import androidx.compose.material.icons.automirrored.filled.AltRoute
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Circle
@@ -26,7 +26,7 @@ import androidx.compose.material.icons.filled.Pentagon
 import androidx.compose.material.icons.filled.Polyline
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Rectangle
-import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Square
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TextFields
@@ -73,7 +73,7 @@ object ToolCatalog {
         ToolSpec(ToolId.Star, "Star", Icons.Filled.Star, "Shape"),
         ToolSpec(ToolId.Curve, "Curve", Icons.Filled.Polyline, "Shape"),
         ToolSpec(ToolId.BezierPen, "Bézier Pen", Icons.Filled.Timeline, "Shape"),
-        ToolSpec(ToolId.Path, "Path", Icons.Filled.AltRoute, "Shape"),
+        ToolSpec(ToolId.Path, "Path", Icons.AutoMirrored.Filled.AltRoute, "Shape"),
         ToolSpec(ToolId.BucketFill, "Fill", Icons.Filled.FormatColorFill, "Shape", "G"),
         ToolSpec(ToolId.Gradient, "Gradient", Icons.Filled.ColorLens, "Shape"),
         ToolSpec(ToolId.Text, "Text", Icons.Filled.TextFields, "Shape", "T"),
@@ -96,7 +96,7 @@ object ToolCatalog {
         // Navigation
         ToolSpec(ToolId.Hand, "Hand", Icons.Filled.PanTool, "Navigation", "Space"),
         ToolSpec(ToolId.Zoom, "Zoom", Icons.Filled.ZoomIn, "Navigation", "Z"),
-        ToolSpec(ToolId.RotateCanvas, "Rotate", Icons.Filled.RotateRight, "Navigation"),
+        ToolSpec(ToolId.RotateCanvas, "Rotate", Icons.AutoMirrored.Filled.RotateRight, "Navigation"),
         ToolSpec(ToolId.Perspective, "Perspective", Icons.Filled.Grain, "Navigation"),
     )
 

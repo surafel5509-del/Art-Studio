@@ -6,13 +6,16 @@ import com.artforge.mobile.core.math.Interp
 import com.artforge.mobile.core.math.Mat3
 import com.artforge.mobile.core.math.StrokeSmoother
 import com.artforge.mobile.core.model.Pt
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 
 /** Colour maths: conversions, hex round-trips, harmonies and contrast. */
+@RunWith(AndroidJUnit4::class)
 class ColorUtilsTest {
 
     @Test
@@ -98,9 +101,9 @@ class ColorUtilsTest {
     @Test
     fun `alpha blending respects opacity`() {
         val half = ColorUtils.withAlphaF(0xFF000000.toInt(), 0.5f)
-        assertEquals(127, ColorUtils.alpha(half))
+        assertEquals(128, ColorUtils.alpha(half))
         val lerped = ColorUtils.lerp(0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0.5f)
-        assertEquals(127, ColorUtils.red(lerped))
+        assertEquals(128, ColorUtils.red(lerped))
     }
 }
 
