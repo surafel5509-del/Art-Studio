@@ -211,36 +211,45 @@ jobs:
             echo "::warning::/dev/kvm is not usable on this runner — instrumented tests skipped"
           fi
 
+      # The emulator is managed directly (rather than through an action) so its own
+      # output lands in instrumented.log and can be annotated when it fails to boot.
+      - name: Boot emulator
+        id: emulator
+        if: steps.kvm.outputs.available == 'true'
+        run: |
+          set -o pipefail
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "sdk=$SDK" >> "$GITHUB_OUTPUT"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" "emulator" "system-images;android-34;google_apis;x86_64" \
+            >> instrumented.log 2>&1
+          echo "no" | "$SDK/cmdline-tools/latest/bin/avdmanager" \
+            create avd -n ci34 -k "system-images;android-34;google_apis;x86_64" -d pixel_6 \
+            >> instrumented.log 2>&1
+          nohup "$SDK/emulator/emulator" -avd ci34 -no-window -no-audio -no-boot-anim \
+            -no-snapshot -gpu swiftshader_indirect -netdelay none -netspeed full \
+            >> instrumented.log 2>&1 &
+          "$SDK/platform-tools/adb" wait-for-device
+          for i in $(seq 1 180); do
+            booted=$("$SDK/platform-tools/adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            if [ "$booted" = "1" ]; then echo "emulator booted"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::emulator did not finish booting within 6 minutes"
+          tail -60 instrumented.log
+          exit 1
+
       - name: Run instrumented tests
         id: instrumented
-        if: steps.kvm.outputs.available == 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          force-avd-creation: true
-          ram-size: 3072M
-          heap-size: 1024M
-          disable-animations: true
-          # The emulator takes several minutes to boot and install the APK; without a
-          # generous limit the runner kills it before any test output is produced.
-          emulator-boot-timeout: 900
-          # Keep the raw log so a failure can be read as a check-run annotation.
-          # Emulator boots on shared runners are flaky, so the suite gets one retry;
-          # a genuine test failure fails both attempts and is reported below.
-          script: |
-            if ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain > instrumented.log 2>&1; then
-              tail -40 instrumented.log
-              exit 0
-            fi
-            echo "first attempt failed, retrying once"
-            tail -60 instrumented.log
-            ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace --console=plain >> instrumented.log 2>&1
+        if: steps.emulator.outcome == 'success'
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon :app:connectedDebugAndroidTest \
+            --stacktrace --console=plain 2>&1 | tee -a instrumented.log
 
       - name: Report instrumentation diagnostics
-        if: failure() && steps.instrumented.outcome == 'failure'
+        if: failure()
         run: |
           emit() {
             clean=${1//'%'/'%25'}
@@ -268,6 +277,24 @@ jobs:
                       print(f"::error::{case.get('classname')}.{case.get('name')}: {detail}")
           PYEOF
           exit 1
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "### Instrumented tests"
+            echo ""
+            if [ "${{ steps.kvm.outputs.available }}" != "true" ]; then
+              echo "Skipped: this runner exposes no usable \`/dev/kvm\`, so the Android"
+              echo "emulator cannot boot. The same suite runs locally with"
+              echo "\`./gradlew :app:connectedDebugAndroidTest\`."
+            elif [ "${{ steps.emulator.outcome }}" != "success" ]; then
+              echo "Emulator failed to boot. See the annotated errors above and the"
+              echo "\`instrumented-test-reports\` artifact."
+            else
+              echo "Result: ${{ steps.instrumented.outcome }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload instrumentation results
         if: always()
