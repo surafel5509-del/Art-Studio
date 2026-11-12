@@ -1,6 +1,10 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.artforge.mobile.ui.studio
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,7 +104,9 @@ fun LayerPanel(
                     hasMask = layer.maskFrameId != null,
                     expanded = layer.expanded,
                     childCount = doc.layers.count { it.parentId == layer.id },
+                    isMultiSelected = layer.id in state.selectedLayerIds,
                     onSelect = { vm.selectLayer(layer.id) },
+                    onToggleSelection = { vm.toggleLayerSelection(layer.id) },
                     onToggleVisible = { vm.setLayerVisible(layer.id, !layer.visible) },
                     onToggleLock = { vm.setLayerLocked(layer.id, !layer.locked) },
                     onToggleExpand = { vm.setLayerExpanded(layer.id, !layer.expanded) },
@@ -221,7 +227,9 @@ private fun LayerRow(
     hasMask: Boolean,
     expanded: Boolean,
     childCount: Int,
+    isMultiSelected: Boolean,
     onSelect: () -> Unit,
+    onToggleSelection: () -> Unit,
     onToggleVisible: () -> Unit,
     onToggleLock: () -> Unit,
     onToggleExpand: () -> Unit,
@@ -242,8 +250,18 @@ private fun LayerRow(
         Modifier
             .fillMaxWidth()
             .height(52.dp)
-            .background(if (isActive) ForgeColors.Accent.copy(alpha = 0.16f) else Color.Transparent)
-            .clickable { onSelect() }
+            .background(
+                when {
+                    isActive -> ForgeColors.Accent.copy(alpha = 0.16f)
+                    isMultiSelected -> ForgeColors.AccentSoft.copy(alpha = 0.12f)
+                    else -> Color.Transparent
+                },
+            )
+            .combinedClickable(
+                onClick = onSelect,
+                // Long-press adds the layer to a multi-selection for group/merge.
+                onLongClick = onToggleSelection,
+            )
             .padding(start = (6 + depth * 12).dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

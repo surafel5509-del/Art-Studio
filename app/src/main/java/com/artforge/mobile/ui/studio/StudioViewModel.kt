@@ -26,6 +26,7 @@ import com.artforge.mobile.core.model.ProjectKind
 import com.artforge.mobile.core.model.Pt
 import com.artforge.mobile.core.model.RectF2
 import com.artforge.mobile.core.model.ToolId
+import com.artforge.mobile.core.model.VectorShape
 import com.artforge.mobile.core.util.ForgeLog
 import com.artforge.mobile.data.export.AnimationExportOptions
 import com.artforge.mobile.data.export.ExportEngine
@@ -526,7 +527,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val tool = _tools.value.tool
 
         return when (tool) {
-            ToolId.Brush, ToolId.Pencil, ToolIdEraser, ToolId.PixelEraser, ToolId.Smudge,
+            ToolId.Brush, ToolId.Pencil, ToolId.Eraser, ToolId.PixelEraser, ToolId.Smudge,
             ToolId.Blur, ToolId.Sharpen, ToolId.Dodge, ToolId.Burn, ToolId.CloneStamp,
             -> startFreehandStroke(point, pressureEnabled)
 
@@ -927,7 +928,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         frameStore.markDirty(frameId)
 
         // Vector layers keep editable geometry in addition to the rasterised pixels.
-        val updatedDoc = if (layer.kind == LayerKind.Vector) {
+        if (layer.kind == LayerKind.Vector) {
             val path = drawingEngine.buildShapePath(
                 preview.tool, from, to, t.cornerRadius, t.shapeSides, t.starPoints, 0.45f, t.constrain,
             )
@@ -1320,6 +1321,13 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         scheduleRender()
     }
 
+    /** Adds or removes a layer from the multi-selection used by group/merge. */
+    fun toggleLayerSelection(layerId: String) {
+        val current = _state.value.selectedLayerIds
+        val next = if (layerId in current) current - layerId else current + layerId
+        _state.value = _state.value.copy(selectedLayerIds = next)
+    }
+
     fun selectLayer(layerId: String) {
         _state.value = _state.value.copy(activeLayerId = layerId)
         scheduleRender()
@@ -1378,9 +1386,9 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun groupSelected() {
         val doc = _state.value.document ?: return
-        val ids = _state.value.selectedFrames // reused set field for multi-select layer ids
+        val ids = _state.value.selectedLayerIds
         val activeId = _state.value.activeLayerId
-        val targets = if (ids.isEmpty() && activeId != null) listOf(activeId) else ids.toList()
+        val targets = if (ids.isEmpty() && activeId != null) listOf(activeId) else ids
         val updated = DocumentMutator.groupLayers(doc, targets)
         _state.value = _state.value.copy(document = updated, dirty = true)
         scheduleRender()

@@ -17,6 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -25,6 +29,7 @@ import com.artforge.mobile.core.model.GradientType
 import com.artforge.mobile.core.model.SymmetryMode
 import com.artforge.mobile.core.model.ToolId
 import com.artforge.mobile.engine.draw.SelectionOp
+import com.artforge.mobile.engine.effects.EffectType
 import com.artforge.mobile.ui.common.PanelHeader
 import com.artforge.mobile.ui.common.ToggleRow
 import com.artforge.mobile.ui.common.ValueSlider
@@ -192,13 +197,12 @@ private fun OptionChip(label: String, selected: Boolean = false, onClick: () -> 
 /** Effects and filters panel with live parameter sliders. */
 @Composable
 fun EffectsPanel(vm: StudioViewModel) {
-    var selected by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf(com.artforge.mobile.engine.effects.EffectType.BrightnessContrast)
-    }
-    var amount by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0.3f) }
-    var radius by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(12f) }
-    var angle by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(45f) }
-    var size by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(8f) }
+    // Delegated state: the explicit getValue/setValue imports are required for `by`.
+    var selected by remember { mutableStateOf(EffectType.BrightnessContrast) }
+    var amount by remember { mutableStateOf(0.3f) }
+    var radius by remember { mutableStateOf(12f) }
+    var angle by remember { mutableStateOf(45f) }
+    var size by remember { mutableStateOf(8f) }
 
     Column(Modifier.fillMaxWidth().background(ForgeColors.Graphite).padding(8.dp)) {
         Text("Filters & effects", style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextPrimary)

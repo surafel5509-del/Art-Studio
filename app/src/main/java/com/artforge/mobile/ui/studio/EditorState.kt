@@ -73,7 +73,10 @@ data class StudioState(
     val statusMessage: String? = null,
     val isPlaying: Boolean = false,
     val frameRange: IntRange = 0..0,
+    /** Timeline frames selected for frame operations (blank/duplicate/delete). */
     val selectedFrames: Set<Int> = emptySet(),
+    /** Layers selected in the layer panel for group/merge operations. */
+    val selectedLayerIds: List<String> = emptyList(),
     val drawPreview: DrawPreview? = null,
     val droppedFrames: List<String> = emptyList(),
     val pendingRecovery: Boolean = false,
