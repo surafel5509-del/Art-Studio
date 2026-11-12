@@ -50,16 +50,31 @@ jobs:
       - name: Report diagnostics
         if: failure()
         run: |
-          grep -E "^(e: |w: .*\.kt)|FAILED|error:|Caused by:" build.log \
-            | head -60 \
-            | while IFS= read -r line; do
-                clean=${line//'%'/'%25'}
-                clean=${clean//$'\r'/''}
-                clean=${clean//$'\n'/'%0A'}
-                echo "::error::${clean:0:900}"
-              done
-          echo "---- last 40 build.log lines ----"
-          tail -40 build.log || true
+          emit() {
+            clean=${1//'%'/'%25'}
+            clean=${clean//$'\r'/''}
+            clean=${clean//$'\n'/'%0A'}
+            echo "::error::${clean:0:900}"
+          }
+          # 1. Compiler errors.
+          grep -E "^e: " build.log | head -40 | while IFS= read -r line; do emit "$line"; done
+
+          # 2. Unit-test failures, with the assertion message, so the reason is
+          #    visible from the check-run annotations (no log download needed).
+          python3 - <<'PYEOF'
+          import glob, xml.etree.ElementTree as ET, os
+          for f in glob.glob('app/build/test-results/**/*.xml', recursive=True):
+              try:
+                  root = ET.parse(f).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  for fail in list(case.iter('failure')) + list(case.iter('error')):
+                      msg = (fail.get('message') or fail.text or '').strip().splitlines()
+                      head = ' '.join(msg[:3])[:700]
+                      print(f"::error::{case.get('classname')}.{case.get('name')}: {head}")
+          PYEOF
+          tail -20 build.log || true
           exit 1
 
       - name: Upload build log
