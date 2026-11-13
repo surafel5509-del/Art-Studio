@@ -176,17 +176,35 @@ container (no annotation-processor DI, which keeps build times down).
 
 ## Tests
 
-- `app/src/test` — JVM + Robolectric: colour maths, interpolation/geometry, animation timeline
-  and onion skin, project storage round-trips (manifest, frames, Room metadata,
-  autosave/recovery, duplication), layer mutator and canvas transform maths.
-- `app/src/androidTest` — device/emulator tests, because they assert on **real rasterised
-  pixels** (Robolectric's `Canvas` is a no-op): drawing engine (strokes, pressure, eraser,
-  symmetry, fill boundary, shapes, magic wand, frame duplication), GIF encoder output,
-  perspective snapping / comic text wrap, vector / pixel / effects / rig engines, plus Compose
-  tests against the real `MainActivity` (home, settings, help, create-project-into-studio).
+Everything that gates a release runs on the JVM, so it runs on every push.
 
-Unit tests are the required check in CI; the emulator job is allowed to fail so a flaky
-emulator boot never blocks artifact delivery, but its diagnostics are annotated on the run.
+**`app/src/test` — JVM + Robolectric (required, gates the build)**
+
+| Suite | Covers |
+| --- | --- |
+| `ui/HomeUiTest` | Real `MainActivity` + navigation graph: launcher grid renders, settings screen shows real preferences, help screen lists the keyboard shortcuts, asset library opens. Compose semantics mirrors what a user taps. |
+| `ui/StudioViewModelTest` | The studio through its view model, exactly as the screen drives it: create → open, a stroke becomes undoable/redoable and marks the document dirty, animation frame navigation, save clears the dirty flag, and every `createDocument` branch yields a drawable frame. |
+| `ui/StudioShortcutTest` | The documented shortcut table (Ctrl+Z/Y/S/O, B/E/I/Space, ←/→, F5/F6) and that unbound keys do nothing. |
+| `engine/AnimationEngineTest` | Exposure sheet, holds, onion-skin counts/tints/falloff, keyframe interpolation. |
+| `data/ProjectStorageTest` | Project package round-trips: manifest, frames, Room metadata, autosave/recovery, duplication. |
+| `core/CoreMathTest`, `ui/DocumentMutatorTest` | Colour maths, geometry, layer mutations, canvas transform maths. |
+
+**`app/src/androidTest` — device/emulator (opt-in)**
+
+These assert on **real rasterised pixels**, which Robolectric cannot produce (its `Canvas`
+is a no-op): `DrawingEngineTest` (strokes, pressure, eraser, symmetry, fill boundary,
+shapes, magic wand, frame duplication), `GifEncoderTest`, and the vector/pixel/effects/rig
+engine checks in `EngineExtrasTest`, plus `StudioUiTest` against the live activity.
+
+Run them with `./gradlew :app:connectedDebugAndroidTest` on a device or a local emulator.
+They are **not** part of the automatic pipeline: hosted CI runners cannot reliably boot an
+Android emulator (the AVD fails to appear over adb), so the job is `workflow_dispatch`-only
+and never blocks a release. That limitation is stated rather than hidden.
+
+**`tools/verify_apk.py`** — release gate. Parses the ZIP central directory and per-entry
+CRC32, parses the binary `AndroidManifest.xml` (package, versionCode, minSdkVersion,
+targetSdkVersion) and rejects a file that merely *wraps* an APK. `apksigner verify` then
+proves the signature, and both APK variants must pass before the release is published.
 
 ## License
 
