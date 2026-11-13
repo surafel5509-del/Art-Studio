@@ -168,6 +168,20 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      # Proves the file is a real, signed, installable APK rather than a truncated or
+      # zip-wrapped download — the failure mode behind "problem parsing the package".
+      - name: Verify the APK is installable
+        run: |
+          set -euo pipefail
+          APK=$(ls out/*.apk | head -1)
+          echo "verifying $APK"
+          file "$APK"
+          BUILD_TOOLS=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/aapt2" dump badging "$APK" | head -5
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | head -12
+          unzip -l "$APK" | grep -E "AndroidManifest.xml|classes.*\.dex" | head -5
+          echo "APK_OK"
+
       - name: Checksum and stage the APK for the release
         if: github.ref_type == 'branch'
         run: |
@@ -198,6 +212,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@v3
+
       - name: Download built APK
         uses: actions/download-artifact@v4
         with:
@@ -206,10 +223,16 @@ jobs:
 
       - name: Rename for the release
         run: |
+          set -euo pipefail
           mkdir -p release
           cp dist/*.apk "release/ArtForgeMobile-debug.apk"
           ls -l release
           sha256sum release/*.apk | tee release/ArtForgeMobile-debug.apk.sha256
+          # Guard the published asset itself, not just the build output.
+          BUILD_TOOLS=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/apksigner" verify --verbose release/ArtForgeMobile-debug.apk
+          "$BUILD_TOOLS/aapt2" dump badging release/ArtForgeMobile-debug.apk \
+            | grep -E "^package:|sdkVersion|targetSdkVersion|application-label"
 
       - name: Publish rolling "latest-debug" release
         env:
