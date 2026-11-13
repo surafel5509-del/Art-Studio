@@ -14,46 +14,39 @@ airplane mode.
 
 ## Install the APK (read this before downloading)
 
-The finished APK is attached to the rolling **`latest-debug`** release:
+The finished APKs are attached to the rolling **`latest-debug`** release:
 
-**<https://github.com/surafel5509-del/Art-Studio/releases/download/latest-debug/ArtForgeMobile-debug.apk>**
+| Device | Download |
+| --- | --- |
+| Android 10 or newer (API 29+) — the intended target | [ArtForgeMobile-android10-debug.apk](https://github.com/surafel5509-del/Art-Studio/releases/download/latest-debug/ArtForgeMobile-android10-debug.apk) |
+| Android 8.0 – 9 (API 26–28) | [ArtForgeMobile-android8plus-debug.apk](https://github.com/surafel5509-del/Art-Studio/releases/download/latest-debug/ArtForgeMobile-android8plus-debug.apk) |
+| checksums | [SHA256SUMS.txt](https://github.com/surafel5509-del/Art-Studio/releases/download/latest-debug/SHA256SUMS.txt) |
 
-Rules that avoid the "*There was a problem parsing the package*" error:
+### If you see "There was a problem parsing the package"
 
-1. Download the asset named **`ArtForgeMobile-debug.apk`** — a **release asset**, not a
-   workflow artifact. GitHub always wraps *artifacts* in a ZIP, and Android cannot install a
-   ZIP. (That ZIP contains both the `.apk` and the `.aab`.)
-2. Let the download finish. A truncated APK parses as corrupt. Verify with the published
-   `ArtForgeMobile-debug.apk.sha256`:
-   `sha256sum ArtForgeMobile-debug.apk`
-3. On the phone, allow *Install unknown apps* for the browser or file manager you use.
-4. Android 10 (API 29) or newer is required. The debug build installs as a separate app
-   (`com.artforge.mobile.debug`), so it will not replace a release install.
+That dialog has exactly three causes, in order of likelihood:
 
-Every push to this branch re-runs `tools/verify_apk.py` (container/CRC/manifest checks),
-`apksigner verify` (signature) and `aapt2 dump badging` before anything is published, so a
-broken or zip-wrapped file can never reach the release.
+1. **Your Android version is older than the APK's `minSdkVersion`.** The Android 10 file
+   declares `minSdkVersion 29`; a phone on Android 8 or 9 rejects it with this message. Use
+   the **android8plus** file (that build is produced with `-PartforgeMinSdk=26`).
+2. **The file that arrived is not an APK.** GitHub always wraps *workflow artifacts* in a
+   ZIP, and a ZIP (or a browser page saved as `.html`) cannot be installed. Download the
+   **release asset** named `*.apk`, never the `artforge-mobile-artifacts` download.
+3. **The download was truncated or modified.** Check it:
+   `sha256sum ArtForgeMobile-android10-debug.apk` should match `SHA256SUMS.txt`.
 
----
+Also allow *Install unknown apps* for the browser/file manager you use. The debug build
+installs as a separate app id (`com.artforge.mobile.debug`), so it will not overwrite a
+release install and can coexist with one.
 
-## Build
+### How the pipeline prevents shipping a broken APK
 
-```bash
-./gradlew :app:assembleDebug          # installable debug APK
-./gradlew :app:bundleRelease          # release AAB (signed with debug key unless secrets set)
-./gradlew :app:testDebugUnitTest      # JVM + Robolectric unit tests
-./gradlew :app:connectedDebugAndroidTest   # instrumented UI tests (needs a device/emulator)
-```
-
-The Gradle wrapper (8.7) and wrapper jar are committed, so no local Gradle install is needed.
-CI (`.github/workflows/android.yml`) runs unit tests, then builds the debug APK and the release
-AAB (uploaded as the `artforge-mobile-artifacts` workflow artifact), and runs instrumented tests
-on an API 34 x86_64 emulator.
-
-Release signing: provide `keystore.properties` at the repo root, or the CI secrets
-`ARTFORGE_KEYSTORE_BASE64`, `ARTFORGE_KEYSTORE_PASSWORD`, `ARTFORGE_KEY_ALIAS`,
-`ARTFORGE_KEY_PASSWORD`. Without them the release build is signed with the debug key so the
-pipeline still produces an installable artifact.
+`tools/verify_apk.py` parses the ZIP central directory, checks the CRC of every entry,
+parses the **binary AndroidManifest.xml** (package name, versionCode, minSdkVersion,
+targetSdkVersion) and refuses an artifact that merely *wraps* an APK. After that,
+`apksigner verify` proves the signature and `aapt2 dump badging` prints the final identity.
+Both APK variants must pass before the release is published, and the SHA-256 of each is
+emitted as a run annotation.
 
 ---
 
