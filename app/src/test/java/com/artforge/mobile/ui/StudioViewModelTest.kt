@@ -77,7 +77,9 @@ class StudioViewModelTest {
         assertNotNull("layer has no drawable frame", doc.layers.first().activeFrameId)
         assertNotNull("no composite was produced", state.composite)
         assertEquals(doc.layers.first().id, state.activeLayerId)
-        vm.onCleared()
+        // The activity would clear the view model; release its jobs explicitly so the
+        // autosave coroutine cannot leak between tests.
+        vm.releaseResourcesForTest()
     }
 
     @Test
@@ -87,9 +89,9 @@ class StudioViewModelTest {
         assertFalse("nothing to undo yet", before.canUndo)
 
         vm.selectTool(com.artforge.mobile.core.model.ToolId.Brush)
-        vm.onPointerDown(com.artforge.mobile.core.model.StrokePoint(40f, 40f, 1f), false)
-        vm.onPointerMove(com.artforge.mobile.core.model.StrokePoint(120f, 120f, 1f), false)
-        vm.onPointerUp(com.artforge.mobile.core.model.StrokePoint(120f, 120f, 1f))
+        vm.onPointerDown(com.artforge.mobile.engine.draw.StrokePoint(40f, 40f, 1f), false)
+        vm.onPointerMove(com.artforge.mobile.engine.draw.StrokePoint(120f, 120f, 1f), false)
+        vm.onPointerUp(com.artforge.mobile.engine.draw.StrokePoint(120f, 120f, 1f))
 
         awaitMain { vm.state.value.canUndo }
         assertTrue("a completed stroke must be undoable", vm.state.value.canUndo)
@@ -103,7 +105,9 @@ class StudioViewModelTest {
         vm.redo()
         awaitMain { vm.state.value.canUndo }
         assertTrue("redo must restore the undone stroke", vm.state.value.canUndo)
-        vm.onCleared()
+        // The activity would clear the view model; release its jobs explicitly so the
+        // autosave coroutine cannot leak between tests.
+        vm.releaseResourcesForTest()
     }
 
     @Test
@@ -122,22 +126,26 @@ class StudioViewModelTest {
         vm.previousFrame()
         awaitMain { vm.state.value.frame == 0 }
         assertEquals(0, vm.state.value.frame)
-        vm.onCleared()
+        // The activity would clear the view model; release its jobs explicitly so the
+        // autosave coroutine cannot leak between tests.
+        vm.releaseResourcesForTest()
     }
 
     @Test
     fun savingAProjectCompletesAndClearsTheDirtyFlag() {
         val vm = createProject(vm = StudioViewModel(app))
         vm.selectTool(com.artforge.mobile.core.model.ToolId.Brush)
-        vm.onPointerDown(com.artforge.mobile.core.model.StrokePoint(10f, 10f, 1f), false)
-        vm.onPointerUp(com.artforge.mobile.core.model.StrokePoint(10f, 10f, 1f))
+        vm.onPointerDown(com.artforge.mobile.engine.draw.StrokePoint(10f, 10f, 1f), false)
+        vm.onPointerUp(com.artforge.mobile.engine.draw.StrokePoint(10f, 10f, 1f))
         awaitMain { vm.state.value.dirty }
 
         vm.saveProject(userInitiated = true)
         awaitMain(30_000) { !vm.state.value.dirty && !vm.state.value.saving }
         assertFalse("save must finish", vm.state.value.saving)
         assertFalse("save must clear the dirty flag", vm.state.value.dirty)
-        vm.onCleared()
+        // The activity would clear the view model; release its jobs explicitly so the
+        // autosave coroutine cannot leak between tests.
+        vm.releaseResourcesForTest()
     }
 
     @Test
@@ -149,7 +157,9 @@ class StudioViewModelTest {
             val layer = vm.state.value.document?.layers?.firstOrNull()
             assertNotNull("$kind project has no layer", layer)
             assertNotNull("$kind project has no active frame", layer!!.activeFrameId)
-            vm.onCleared()
+            // The activity would clear the view model; release its jobs explicitly so the
+        // autosave coroutine cannot leak between tests.
+        vm.releaseResourcesForTest()
         }
     }
 }

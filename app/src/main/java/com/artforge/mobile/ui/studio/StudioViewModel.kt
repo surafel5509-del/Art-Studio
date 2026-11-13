@@ -2200,12 +2200,22 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    /**
+     * Cancels the background loops and releases engine memory. `onCleared` is protected,
+     * so tests (which drive the view model directly) need this explicit hook.
+     */
+    fun releaseResourcesForTest() = releaseResources()
+
+    private fun releaseResources() {
         autosaveJob?.cancel()
         timeline.release()
         renderer.release()
         drawingEngine.cancelStroke()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        releaseResources()
     }
 
     companion object {
