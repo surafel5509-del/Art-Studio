@@ -34,7 +34,11 @@ android {
 
     defaultConfig {
         applicationId = "com.artforge.mobile"
-        minSdk = 29
+        // Android 10 (API 29) is the design target. `-PartforgeMinSdk=26` builds the
+        // Android 8.0+ compatible variant for devices that cannot install the API 29
+        // build ("problem parsing the package" is what an older phone shows when the
+        // APK's minSdkVersion is above the device's Android version).
+        minSdk = (project.findProperty("artforgeMinSdk") as String?)?.toInt() ?: 29
         targetSdk = 34
         // Bumped on every user-visible build so a sideloaded APK can be identified in
         // Settings > Apps and so Android will install it over an older build.

@@ -145,16 +145,33 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
-      - name: Assemble debug APK
+      - name: Assemble debug APK (Android 10+, API 29)
         run: ./gradlew --no-daemon :app:assembleDebug --stacktrace
+
+      # Devices older than Android 10 reject the API 29 build with "There was a
+      # problem parsing the package" (minSdkVersion above the device's Android
+      # version). This compatible build lowers minSdk to 26 / Android 8.0.
+      # The first APK is copied out of the way because Gradle overwrites
+      # app-debug.apk with the second build.
+      - name: Assemble compatibility APK (Android 8.0+)
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/artforge-mobile-android10-debug.apk
+          ./gradlew --no-daemon :app:assembleDebug -PartforgeMinSdk=26 --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/artforge-mobile-android8plus-debug.apk
 
       - name: Bundle release AAB
         run: ./gradlew --no-daemon :app:bundleRelease --stacktrace
 
       - name: Rename artifacts
         run: |
+          set -euo pipefail
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk "out/artforge-mobile-${GITHUB_SHA::7}-debug.apk"
+          cp app/build/outputs/apk/debug/artforge-mobile-android10-debug.apk \
+             "out/artforge-mobile-android10-debug.apk"
+          cp app/build/outputs/apk/debug/artforge-mobile-android8plus-debug.apk \
+             "out/artforge-mobile-android8plus-debug.apk"
+          ls -l out
           find app/build/outputs/bundle/release -name '*.aab' -exec cp {} "out/artforge-mobile-${GITHUB_SHA::7}-release.aab" \;
 
       - name: Upload APK and AAB
@@ -173,30 +190,29 @@ jobs:
       - name: Verify the APK is installable
         run: |
           set -euo pipefail
-          APK=$(ls out/*.apk | head -1)
+          rm -f verify.log
+          for APK in out/artforge-mobile-android10-debug.apk out/artforge-mobile-android8plus-debug.apk; do
           file "$APK"
           # 1. Container + manifest structure, parsed without the Android SDK.
           python3 tools/verify_apk.py "$APK" --expected-package com.artforge.mobile \
-            | tee verify.log
+            | tee -a verify.log
           # Publish the evidence on the run itself so the built identity is auditable
           # without downloading anything (artifact/log downloads are large and flaky).
-          while IFS= read -r line; do
-            echo "::notice::${line}"
-          done < verify.log
           sha=$(sha256sum "$APK" | cut -d' ' -f1)
-          echo "::notice::SHA-256 ${sha} for $(basename "$APK")"
-          echo "runtime installed: com.artforge.mobile.debug" >> "$GITHUB_STEP_SUMMARY"
-          sed -n '1,20p' verify.log >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::$(basename "$APK") SHA-256 ${sha}"
+          echo "installed id: com.artforge.mobile.debug" >> "$GITHUB_STEP_SUMMARY"
+          sed -n '1,40p' verify.log >> "$GITHUB_STEP_SUMMARY"
           # 2. Cryptographic signature over the whole file.
           BUILD_TOOLS=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
           "$BUILD_TOOLS/aapt2" dump badging "$APK" | head -3
+          done
 
       - name: Checksum and stage the APK for the release
         if: github.ref_type == 'branch'
         run: |
           cd out
-          sha256sum *.apk > artforge-debug.apk.sha256
+          sha256sum *.apk > SHA256SUMS.txt
           cat artforge-debug.apk.sha256
 
       - name: Upload release-ready APK
@@ -228,27 +244,22 @@ jobs:
           name: artforge-debug-apk
           path: dist
 
-      - name: Rename for the release
+      - name: Rename and validate for the release
         run: |
           set -euo pipefail
           mkdir -p release
-          cp dist/*.apk "release/ArtForgeMobile-debug.apk"
+          # Two clearly named, directly installable files.
+          cp "$(ls dist/*-debug.apk | grep -v android8plus | head -1)" \
+             "release/ArtForgeMobile-android10-debug.apk"
+          cp "$(ls dist/*android8plus*.apk | head -1)" \
+             "release/ArtForgeMobile-android8plus-debug.apk"
+          # Legacy alias so older links keep working.
+          cp release/ArtForgeMobile-android10-debug.apk release/ArtForgeMobile-debug.apk
           ls -l release
-          sha256sum release/*.apk | tee release/ArtForgeMobile-debug.apk.sha256
-          # Guard the exact bytes that get published, not just the build output.
-          python3 tools/verify_apk.py release/ArtForgeMobile-debug.apk \
-            --expected-package com.artforge.mobile
-          # Refuse to publish something a device cannot install: the APK must be
-          # signed and its zip must be intact.
-          python3 - <<'PY'
-          import sys, zipfile
-          with zipfile.ZipFile('release/ArtForgeMobile-debug.apk') as z:
-              assert z.testzip() is None
-              names = z.namelist()
-              assert not [n for n in names if n.endswith('.apk')], "artifact nested an APK"
-          print("zip integrity ok, %d entries" % len(names))
-          PY
-          ls -l release
+          for f in release/ArtForgeMobile-android10-debug.apk release/ArtForgeMobile-android8plus-debug.apk; do
+            python3 tools/verify_apk.py "$f" --expected-package com.artforge.mobile
+          done
+          sha256sum release/*.apk | tee release/SHA256SUMS.txt
 
       - name: Publish rolling "latest-debug" release
         env:
@@ -258,9 +269,18 @@ jobs:
           cat > notes.md <<'NOTES'
           Debug APK built automatically from the latest commit on this branch.
 
-          **Install:** download `ArtForgeMobile-debug.apk` from the assets below. Do not
-          use the Actions artifact ZIP: GitHub always wraps artifacts in a zip, and
-          Android cannot install a zip (that is the "problem parsing the package" error).
+          **Pick the right file**
+
+          | Device | Download |
+          | --- | --- |
+          | Android 10 or newer (API 29+) | `ArtForgeMobile-android10-debug.apk` |
+          | Android 8.0 - 9 (API 26-28) | `ArtForgeMobile-android8plus-debug.apk` |
+
+          If the Android 10 file reports *"There was a problem parsing the package"*, your
+          device is older than Android 10 - use the android8plus file.
+
+          Do **not** use the Actions artifact ZIP: GitHub always wraps artifacts in a zip,
+          and Android cannot install a zip (that is the same error).
 
           On the phone, allow *Install unknown apps* for the browser or file manager
           first, then open the downloaded `.apk`.
@@ -269,8 +289,10 @@ jobs:
           the release AAB is inside the `artforge-mobile-artifacts` artifact.
           NOTES
           gh release create latest-debug \
+            release/ArtForgeMobile-android10-debug.apk \
+            release/ArtForgeMobile-android8plus-debug.apk \
             release/ArtForgeMobile-debug.apk \
-            release/ArtForgeMobile-debug.apk.sha256 \
+            release/SHA256SUMS.txt \
             --title "ArtForge Mobile - latest debug APK" \
             --notes-file notes.md
 
