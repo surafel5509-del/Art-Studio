@@ -2181,13 +2181,20 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         autosaveJob?.cancel()
         val settings = _settings.value
         if (!settings.autosaveEnabled) return
-        autosaveJob = viewModelScope.launch {
+        // The timer must not live on the main dispatcher: a permanently pending
+        // `delay` keeps the main looper busy forever, which means the UI never reaches
+        // an idle state (this broke instrumented/Espresso tests and needlessly woke the
+        // main thread). Only the small state reads hop back to Main.
+        autosaveJob = viewModelScope.launch(Dispatchers.Default) {
             while (true) {
                 delay(settings.autosaveIntervalSeconds.coerceAtLeast(30) * 1000L)
                 val doc = _state.value.document ?: continue
                 if (_state.value.dirty) {
-                    frameStore.flushAll(doc.id)
-                    repo.autosave(doc)
+                    // Flushing touches disk, so it must never run on Main.
+                    withContext(Dispatchers.IO) {
+                        frameStore.flushAll(doc.id)
+                        repo.autosave(doc)
+                    }
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.artforge.mobile.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -61,6 +62,11 @@ class HomeUiTest {
         // The studio is identified by its top bar controls, which only exist there.
         waitForText("layers", timeoutMs = 20_000)
         rule.onAllNodesWithText("layers", substring = true).onFirst().assertIsDisplayed()
+        // Undo/save are studio-only controls: their presence proves the editor composed.
+        rule.waitUntil(15_000) {
+            rule.onAllNodesWithText("Undo", substring = true).fetchSemanticsNodes().isNotEmpty() ||
+                rule.onAllNodesWithContentDescription("Undo").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test
@@ -86,8 +92,7 @@ class HomeUiTest {
     @Test
     fun helpScreenListsTheKeyboardShortcuts() {
         dismissOnboarding()
-        rule.onAllNodesWithText("Settings", substring = true).onFirst().performClick()
-        waitForText("Pressure sensitivity")
+        // Help lives on the home screen's quick actions, not inside Settings.
         rule.onAllNodesWithText("Help", substring = true).onFirst().performClick()
         waitForText("Ctrl+Z")
         rule.onAllNodesWithText("Ctrl+Z", substring = true).onFirst().assertIsDisplayed()
