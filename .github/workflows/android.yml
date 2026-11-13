@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false -Dkotlin.daemon.jvm.options=-Xmx2g"
@@ -160,10 +160,80 @@ jobs:
       - name: Upload APK and AAB
         uses: actions/upload-artifact@v4
         with:
+          # NOTE: GitHub always zips artifacts, so this download is a .zip containing
+          # the .apk and .aab. The "Publish installable APK" job below also attaches
+          # the raw .apk to the release, which installs directly on a device.
           name: artforge-mobile-artifacts
           path: out/*
           retention-days: 30
           if-no-files-found: error
+
+      - name: Checksum and stage the APK for the release
+        if: github.ref_type == 'branch'
+        run: |
+          cd out
+          sha256sum *.apk > artforge-debug.apk.sha256
+          cat artforge-debug.apk.sha256
+
+      - name: Upload release-ready APK
+        if: github.ref_type == 'branch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: artforge-debug-apk
+          path: out/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Publishes the raw .apk so it can be downloaded and installed in one step.
+  # Downloading a workflow *artifact* always yields a .zip; a release asset does
+  # not, which is what "automatically generated release notes"-style flows need.
+  # ---------------------------------------------------------------------------
+  publish-apk:
+    name: Publish installable APK
+    needs: build
+    if: github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: artforge-debug-apk
+          path: dist
+
+      - name: Rename for the release
+        run: |
+          mkdir -p release
+          cp dist/*.apk "release/ArtForgeMobile-debug.apk"
+          ls -l release
+          sha256sum release/*.apk | tee release/ArtForgeMobile-debug.apk.sha256
+
+      - name: Publish rolling "latest-debug" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest-debug --yes --cleanup-tag 2>/dev/null || true
+          cat > notes.md <<'NOTES'
+          Debug APK built automatically from the latest commit on this branch.
+
+          **Install:** download `ArtForgeMobile-debug.apk` from the assets below. Do not
+          use the Actions artifact ZIP: GitHub always wraps artifacts in a zip, and
+          Android cannot install a zip (that is the "problem parsing the package" error).
+
+          On the phone, allow *Install unknown apps* for the browser or file manager
+          first, then open the downloaded `.apk`.
+
+          This build is signed with the debug key, so it is not Play-Store uploadable;
+          the release AAB is inside the `artforge-mobile-artifacts` artifact.
+          NOTES
+          gh release create latest-debug \
+            release/ArtForgeMobile-debug.apk \
+            release/ArtForgeMobile-debug.apk.sha256 \
+            --title "ArtForge Mobile - latest debug APK" \
+            --notes-file notes.md
 
   # ---------------------------------------------------------------------------
   # Instrumented UI tests need an emulator, so they run separately and are

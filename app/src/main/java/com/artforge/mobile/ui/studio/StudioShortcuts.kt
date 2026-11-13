@@ -37,45 +37,66 @@ import com.artforge.mobile.core.model.ToolId
  * Only unmodified letter keys act as tools, so typing in a text field (which consumes
  * the event first) is never hijacked.
  */
+/** One bound command, resolved from a key + modifier state without any Android types. */
+enum class StudioCommand {
+    Undo, Redo, Save, Open, Brush, Eraser, Eyedropper, Hand, PreviousFrame, NextFrame,
+    TogglePlayback, DuplicateFrame,
+}
+
+/**
+ * Pure key table: (key, ctrl, shift) -> command. Kept free of Compose/Android types so
+ * the binding can be unit-tested on the JVM with no key-event plumbing.
+ */
+fun studioCommandFor(key: Key, ctrl: Boolean, shift: Boolean): StudioCommand? {
+    if (ctrl) {
+        return when (key) {
+            Key.Z -> if (shift) StudioCommand.Redo else StudioCommand.Undo
+            Key.Y -> StudioCommand.Redo
+            Key.S -> StudioCommand.Save
+            Key.O -> StudioCommand.Open
+            else -> null
+        }
+    }
+    if (shift) return null
+    return when (key) {
+        Key.B -> StudioCommand.Brush
+        Key.E -> StudioCommand.Eraser
+        Key.I -> StudioCommand.Eyedropper
+        Key.Spacebar -> StudioCommand.Hand
+        Key.DirectionLeft -> StudioCommand.PreviousFrame
+        Key.DirectionRight -> StudioCommand.NextFrame
+        Key.F5 -> StudioCommand.TogglePlayback
+        Key.F6 -> StudioCommand.DuplicateFrame
+        else -> null
+    }
+}
+
+/** Runs [command] against the studio actions. */
+fun StudioShortcutActions.run(command: StudioCommand) {
+    when (command) {
+        StudioCommand.Undo -> undo()
+        StudioCommand.Redo -> redo()
+        StudioCommand.Save -> save()
+        StudioCommand.Open -> open()
+        StudioCommand.Brush -> selectTool(ToolId.Brush)
+        StudioCommand.Eraser -> selectTool(ToolId.Eraser)
+        StudioCommand.Eyedropper -> selectTool(ToolId.Eyedropper)
+        StudioCommand.Hand -> selectTool(ToolId.Hand)
+        StudioCommand.PreviousFrame -> previousFrame()
+        StudioCommand.NextFrame -> nextFrame()
+        StudioCommand.TogglePlayback -> togglePlayback()
+        StudioCommand.DuplicateFrame -> duplicateFrame()
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 fun studioShortcut(keyEvent: KeyEvent, actions: StudioShortcutActions): Boolean {
     if (keyEvent.type != KeyEventType.KeyDown) return false
     val ctrl = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
     val shift = keyEvent.isShiftPressed
-
-    if (ctrl) {
-        return when (keyEvent.key) {
-            Key.Z -> {
-                if (shift) actions.redo() else actions.undo()
-                true
-            }
-            Key.Y -> {
-                actions.redo()
-                true
-            }
-            Key.S -> {
-                actions.save()
-                true
-            }
-            Key.O -> {
-                actions.open()
-                true
-            }
-            else -> false
-        }
-    }
-
-    return when (keyEvent.key) {
-        Key.B -> { actions.selectTool(ToolId.Brush); true }
-        Key.E -> { actions.selectTool(ToolId.Eraser); true }
-        Key.I -> { actions.selectTool(ToolId.Eyedropper); true }
-        Key.Spacebar -> { actions.selectTool(ToolId.Hand); true }
-        Key.DirectionLeft -> { actions.previousFrame(); true }
-        Key.DirectionRight -> { actions.nextFrame(); true }
-        Key.F5 -> { actions.togglePlayback(); true }
-        Key.F6 -> { actions.duplicateFrame(); true }
-        else -> false
-    }
+    val command = studioCommandFor(keyEvent.key, ctrl, shift) ?: return false
+    actions.run(command)
+    return true
 }
 
 /** Callbacks the studio supplies to [studioShortcut]. */
