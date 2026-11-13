@@ -158,9 +158,12 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 dirty = false,
             )
             _view.value = CanvasView()
-            settingsRepo.update { it.copy(lastProjectId = doc.id) }
-            startAutosave()
+            // Draw the first frame before touching preferences: the DataStore write is a
+            // suspending disk operation and must never delay the canvas appearing.
             render()
+            startAutosave()
+            runCatching { settingsRepo.update { it.copy(lastProjectId = doc.id) } }
+                .onFailure { ForgeLog.w(TAG, "could not remember last project: ${it.message}") }
         }
     }
 
