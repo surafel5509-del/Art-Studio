@@ -365,7 +365,13 @@ jobs:
           nohup "$SDK/emulator/emulator" -avd ci34 -no-window -no-audio -no-boot-anim \
             -no-snapshot -gpu swiftshader_indirect -netdelay none -netspeed full \
             >> instrumented.log 2>&1 &
-          "$SDK/platform-tools/adb" wait-for-device
+          # Bounded wait: `adb wait-for-device` can block forever when the emulator
+          # never starts, which silently burns the job's whole timeout.
+          for i in $(seq 1 120); do
+            if "$SDK/platform-tools/adb" get-state 2>/dev/null | grep -q device; then break; fi
+            sleep 2
+          done
+          "$SDK/platform-tools/adb" get-state || { echo "::error::adb never saw the device"; tail -80 instrumented.log; exit 1; }
           for i in $(seq 1 180); do
             booted=$("$SDK/platform-tools/adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
             if [ "$booted" = "1" ]; then echo "emulator booted"; exit 0; fi

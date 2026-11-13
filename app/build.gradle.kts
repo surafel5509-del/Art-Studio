@@ -101,6 +101,11 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
+        // Robolectric + Compose needs real Android resources for the UI tests that run
+        // on the JVM (the emulator-based suite cannot run on shared CI runners).
+        unitTests.all {
+            it.systemProperty("robolectric.logging", "stdout")
+        }
     }
     lint {
         abortOnError = false
@@ -157,6 +162,11 @@ dependencies {
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("org.robolectric:robolectric:4.13")
+    // Compose UI testing on the JVM, so the UI suite runs where it always executes.
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation("androidx.test.espresso:espresso-core:3.6.1")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
