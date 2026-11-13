@@ -75,6 +75,13 @@ class StudioViewModelTest {
         assertTrue("a project needs at least one layer", doc.layers.isNotEmpty())
         // The canvas must have something to paint into: this exact guarantee was missing.
         assertNotNull("layer has no drawable frame", doc.layers.first().activeFrameId)
+        // A render failure surfaces as a status message rather than an exception, so
+        // assert on that first: it distinguishes "the canvas broke" from "the JVM
+        // software rasteriser could not draw in this environment".
+        assertFalse(
+            "the canvas render reported a failure: ${state.statusMessage}",
+            state.statusMessage?.startsWith("Display error") == true,
+        )
         assertNotNull("no composite was produced", state.composite)
         assertEquals(doc.layers.first().id, state.activeLayerId)
         // The activity would clear the view model; release its jobs explicitly so the

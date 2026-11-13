@@ -2123,6 +2123,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun render() {
         val doc = _state.value.document ?: return
+        try {
+            renderNow(doc)
+        } catch (t: Throwable) {
+            // A failed render must never take down the editor: the previous frame stays
+            // on screen and the user is told, instead of the canvas silently freezing.
+            ForgeLog.e(TAG, "canvas render failed", t)
+            _state.value = _state.value.copy(statusMessage = "Display error: ${t.message}")
+        }
+    }
+
+    private fun renderNow(doc: ProjectDocument) {
         val layer = activeLayer()
         val frame = _state.value.frame
         val frameId = layer?.let { compositor.resolveFrame(it, frame) }
