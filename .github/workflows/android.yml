@@ -145,8 +145,15 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
+      # Each variant is copied straight into out/ as soon as it is built: a later
+      # Gradle invocation with a different minSdk regenerates app-debug.apk, so
+      # relying on it surviving until a later step is fragile.
       - name: Assemble debug APK (Android 10+, API 29)
-        run: ./gradlew --no-daemon :app:assembleDebug --stacktrace
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon :app:assembleDebug --stacktrace
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk out/artforge-mobile-android10-debug.apk
 
       # Devices older than Android 10 reject the API 29 build with "There was a
       # problem parsing the package" (minSdkVersion above the device's Android
@@ -156,23 +163,20 @@ jobs:
       - name: Assemble compatibility APK (Android 8.0+)
         run: |
           set -euo pipefail
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/artforge-mobile-android10-debug.apk
           ./gradlew --no-daemon :app:assembleDebug -PartforgeMinSdk=26 --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/artforge-mobile-android8plus-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/artforge-mobile-android8plus-debug.apk
+          ls -l out
 
       - name: Bundle release AAB
         run: ./gradlew --no-daemon :app:bundleRelease --stacktrace
 
-      - name: Rename artifacts
+      - name: Stage the release bundle
         run: |
           set -euo pipefail
-          mkdir -p out
-          cp app/build/outputs/apk/debug/artforge-mobile-android10-debug.apk \
-             "out/artforge-mobile-android10-debug.apk"
-          cp app/build/outputs/apk/debug/artforge-mobile-android8plus-debug.apk \
-             "out/artforge-mobile-android8plus-debug.apk"
+          AAB=$(find app/build/outputs/bundle/release -name '*.aab' | head -1)
+          test -n "$AAB" || { echo "::error::no .aab produced"; exit 1; }
+          cp "$AAB" "out/artforge-mobile-release.aab"
           ls -l out
-          find app/build/outputs/bundle/release -name '*.aab' -exec cp {} "out/artforge-mobile-${GITHUB_SHA::7}-release.aab" \;
 
       - name: Upload APK and AAB
         uses: actions/upload-artifact@v4
@@ -213,14 +217,14 @@ jobs:
         run: |
           cd out
           sha256sum *.apk > SHA256SUMS.txt
-          cat artforge-debug.apk.sha256
+          cat SHA256SUMS.txt
 
       - name: Upload release-ready APK
         if: github.ref_type == 'branch'
         uses: actions/upload-artifact@v4
         with:
           name: artforge-debug-apk
-          path: out/*.apk
+          path: out/*artforge-mobile-android*-debug.apk
           retention-days: 30
           if-no-files-found: error
 
