@@ -176,7 +176,17 @@ jobs:
           APK=$(ls out/*.apk | head -1)
           file "$APK"
           # 1. Container + manifest structure, parsed without the Android SDK.
-          python3 tools/verify_apk.py "$APK" --expected-package com.artforge.mobile
+          python3 tools/verify_apk.py "$APK" --expected-package com.artforge.mobile \
+            | tee verify.log
+          # Publish the evidence on the run itself so the built identity is auditable
+          # without downloading anything (artifact/log downloads are large and flaky).
+          while IFS= read -r line; do
+            echo "::notice::${line}"
+          done < verify.log
+          sha=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "::notice::SHA-256 ${sha} for $(basename "$APK")"
+          echo "runtime installed: com.artforge.mobile.debug" >> "$GITHUB_STEP_SUMMARY"
+          sed -n '1,20p' verify.log >> "$GITHUB_STEP_SUMMARY"
           # 2. Cryptographic signature over the whole file.
           BUILD_TOOLS=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
