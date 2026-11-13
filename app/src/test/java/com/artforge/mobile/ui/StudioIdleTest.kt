@@ -30,6 +30,35 @@ class StudioIdleTest {
     @get:Rule
     val rule = createComposeRule()
 
+    private fun step(name: String, block: () -> Unit) {
+        val started = System.currentTimeMillis()
+        block()
+        println("STEP_OK $name in ${System.currentTimeMillis() - started}ms")
+    }
+
+    /** Pins down which repository call stalls, so a hang is never a mystery. */
+    @Test
+    fun repositoryCallsUsedByProjectCreationDoNotStall() {
+        val app = ApplicationProvider.getApplicationContext<ArtForgeApplication>()
+        val repo = app.projectRepository
+        val created = CountDownLatch(1)
+        var doc: com.artforge.mobile.core.model.ProjectDocument? = null
+        kotlinx.coroutines.runBlocking {
+            step("createDocument") {
+                doc = repo.createDocument(
+                    ProjectKind.Illustration, "Probe", 256, 256, 24, 24, false, 0xFFFFFFFF.toInt(),
+                )
+            }
+            step("registerProject") { repo.registerProject(doc!!) }
+            step("ensureFrames") { repo.ensureFrames(doc!!) }
+            step("saveProject") { repo.saveProject(doc!!, null) }
+            step("loadProject") { repo.loadProject(doc!!.id) }
+            step("autosave") { repo.autosave(doc!!) }
+            created.countDown()
+        }
+        assertTrue("repository probe did not finish", created.await(5, TimeUnit.SECONDS))
+    }
+
     @Test
     fun openingAProjectReachesAStableState() {
         val app = ApplicationProvider.getApplicationContext<ArtForgeApplication>()
