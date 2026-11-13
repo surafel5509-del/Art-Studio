@@ -36,8 +36,10 @@ android {
         applicationId = "com.artforge.mobile"
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        // Bumped on every user-visible build so a sideloaded APK can be identified in
+        // Settings > Apps and so Android will install it over an older build.
+        versionCode = 2
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         resourceConfigurations += listOf("en")

@@ -8,7 +8,31 @@ airplane mode.
 
 - **Min SDK 29** (Android 10) · target/compile SDK 34
 - Phones, tablets, foldables and stylus input; portrait and landscape
-- Package id `com.artforge.mobile`
+- Package id `com.artforge.mobile` (debug builds install as `com.artforge.mobile.debug`)
+
+---
+
+## Install the APK (read this before downloading)
+
+The finished APK is attached to the rolling **`latest-debug`** release:
+
+**<https://github.com/surafel5509-del/Art-Studio/releases/download/latest-debug/ArtForgeMobile-debug.apk>**
+
+Rules that avoid the "*There was a problem parsing the package*" error:
+
+1. Download the asset named **`ArtForgeMobile-debug.apk`** — a **release asset**, not a
+   workflow artifact. GitHub always wraps *artifacts* in a ZIP, and Android cannot install a
+   ZIP. (That ZIP contains both the `.apk` and the `.aab`.)
+2. Let the download finish. A truncated APK parses as corrupt. Verify with the published
+   `ArtForgeMobile-debug.apk.sha256`:
+   `sha256sum ArtForgeMobile-debug.apk`
+3. On the phone, allow *Install unknown apps* for the browser or file manager you use.
+4. Android 10 (API 29) or newer is required. The debug build installs as a separate app
+   (`com.artforge.mobile.debug`), so it will not replace a release install.
+
+Every push to this branch re-runs `tools/verify_apk.py` (container/CRC/manifest checks),
+`apksigner verify` (signature) and `aapt2 dump badging` before anything is published, so a
+broken or zip-wrapped file can never reach the release.
 
 ---
 

@@ -174,13 +174,13 @@ jobs:
         run: |
           set -euo pipefail
           APK=$(ls out/*.apk | head -1)
-          echo "verifying $APK"
           file "$APK"
+          # 1. Container + manifest structure, parsed without the Android SDK.
+          python3 tools/verify_apk.py "$APK" --expected-package com.artforge.mobile
+          # 2. Cryptographic signature over the whole file.
           BUILD_TOOLS=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
-          "$BUILD_TOOLS/aapt2" dump badging "$APK" | head -5
-          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" | head -12
-          unzip -l "$APK" | grep -E "AndroidManifest.xml|classes.*\.dex" | head -5
-          echo "APK_OK"
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
+          "$BUILD_TOOLS/aapt2" dump badging "$APK" | head -3
 
       - name: Checksum and stage the APK for the release
         if: github.ref_type == 'branch'
@@ -225,12 +225,20 @@ jobs:
           cp dist/*.apk "release/ArtForgeMobile-debug.apk"
           ls -l release
           sha256sum release/*.apk | tee release/ArtForgeMobile-debug.apk.sha256
-          # Guard the published asset itself, not just the build output: a valid
-          # .apk starts with PK and contains a manifest plus dex code.
-          head -c 2 release/ArtForgeMobile-debug.apk | grep -q "PK"
-          unzip -l release/ArtForgeMobile-debug.apk | grep -q "AndroidManifest.xml"
-          unzip -l release/ArtForgeMobile-debug.apk | grep -q "classes"
-          echo "asset looks like a real APK"
+          # Guard the exact bytes that get published, not just the build output.
+          python3 tools/verify_apk.py release/ArtForgeMobile-debug.apk \
+            --expected-package com.artforge.mobile
+          # Refuse to publish something a device cannot install: the APK must be
+          # signed and its zip must be intact.
+          python3 - <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile('release/ArtForgeMobile-debug.apk') as z:
+              assert z.testzip() is None
+              names = z.namelist()
+              assert not [n for n in names if n.endswith('.apk')], "artifact nested an APK"
+          print("zip integrity ok, %d entries" % len(names))
+          PY
+          ls -l release
 
       - name: Publish rolling "latest-debug" release
         env:
