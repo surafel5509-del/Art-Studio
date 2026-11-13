@@ -30,7 +30,7 @@ class StudioIdleTest {
     @get:Rule
     val rule = createComposeRule()
 
-    private fun step(name: String, block: () -> Unit) {
+    private suspend fun step(name: String, block: suspend () -> Unit) {
         val started = System.currentTimeMillis()
         block()
         println("STEP_OK $name in ${System.currentTimeMillis() - started}ms")
