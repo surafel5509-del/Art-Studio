@@ -61,7 +61,9 @@ class HomeUiTest {
     @Test
     fun settingsScreenShowsRealPreferences() {
         dismissOnboarding()
-        rule.onAllNodesWithText("Settings", substring = true).onFirst().performClick()
+        // Settings is a labelled icon in the home header (top-right), so target it by
+        // content description rather than by a text label that the card list also has.
+        rule.onAllNodesWithContentDescription("Settings").onFirst().performClick()
         waitForText("Pressure sensitivity")
         waitForText("Palm rejection")
         waitForText("Reduce motion")
@@ -71,8 +73,8 @@ class HomeUiTest {
     @Test
     fun helpScreenListsTheKeyboardShortcuts() {
         dismissOnboarding()
-        // Help lives on the home screen's quick actions, not inside Settings.
-        rule.onAllNodesWithText("Help", substring = true).onFirst().performClick()
+        // Help lives in the home header, next to Settings, not inside Settings.
+        rule.onAllNodesWithContentDescription("Help").onFirst().performClick()
         waitForText("Ctrl+Z")
         rule.onAllNodesWithText("Ctrl+Z", substring = true).onFirst().assertIsDisplayed()
     }
