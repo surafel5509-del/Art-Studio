@@ -41,23 +41,6 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** Section header used across panels. */
-@Composable
-fun PanelHeader(title: String, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            color = ForgeColors.TextMuted,
-        )
-        trailing?.invoke()
-    }
-}
-
 /** Labelled slider row with a numeric readout. */
 @Composable
 fun ValueSlider(
@@ -259,56 +242,6 @@ fun CheckerboardBackground(modifier: Modifier = Modifier, cellSize: Float = 12f)
                 )
             }
         }
-    }
-}
-
-/** Small pill button used in toolbars. */
-@Composable
-fun PillButton(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    selected: Boolean = false,
-    enabled: Boolean = true,
-) {
-    Box(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(if (selected) ForgeColors.Accent else ForgeColors.GraphiteElevated)
-            .pointerInput(enabled, onClick) { if (enabled) detectTapGestures { onClick() } }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (selected) Color(0xFF0B0C0F) else ForgeColors.TextSecondary,
-        )
-    }
-}
-
-@Composable
-fun SectionDivider(modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(ForgeColors.GraphiteBorder),
-    )
-}
-
-@Composable
-fun EmptyState(title: String, message: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier.fillMaxWidth().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextPrimary)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            message,
-            style = MaterialTheme.typography.bodySmall,
-            color = ForgeColors.TextMuted,
-        )
     }
 }
 

@@ -4,6 +4,7 @@ package com.artforge.mobile.ui.studio
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.ViewTimeline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
@@ -62,6 +71,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.artforge.mobile.core.model.ProjectKind
 import com.artforge.mobile.core.model.ToolId
 import com.artforge.mobile.ui.common.ColorPickerDialog
+import com.artforge.mobile.ui.common.GestureIconButton
+import com.artforge.mobile.ui.common.Hairline
+import com.artforge.mobile.ui.common.PillButton
+import com.artforge.mobile.ui.common.StatusChip
 import com.artforge.mobile.ui.common.ColorSwatch
 import com.artforge.mobile.ui.theme.ForgeColors
 
@@ -203,7 +216,7 @@ fun StudioScreen(
                         selected = tools.tool,
                         onSelect = vm::selectTool,
                         vertical = true,
-                        modifier = Modifier.fillMaxHeight().width(64.dp),
+                        modifier = Modifier.fillMaxHeight().width(58.dp),
                     )
                 } else {
                     // compact phones keep the rail as a slim vertical strip
@@ -211,11 +224,16 @@ fun StudioScreen(
                         selected = tools.tool,
                         onSelect = vm::selectTool,
                         vertical = true,
-                        modifier = Modifier.fillMaxHeight().width(56.dp),
+                        modifier = Modifier.fillMaxHeight().width(58.dp),
                     )
                 }
 
-                Column(Modifier.weight(1f).fillMaxHeight()) {
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(ForgeColors.CharcoalDeep),
+                ) {
                     CanvasSurface(
                         state = state,
                         view = view,
@@ -356,75 +374,130 @@ private fun StudioTopBar(
     var renaming by remember { mutableStateOf(false) }
     var titleDraft by remember { mutableStateOf("") }
 
-    Row(
+    Column(
         Modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .background(ForgeColors.Charcoal)
-            .padding(horizontal = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .background(ForgeColors.Graphite)
     ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = ForgeColors.TextPrimary)
-        }
-        Column(Modifier.weight(1f).clickable {
-            titleDraft = state.document?.title ?: "Untitled"
-            renaming = true
-        }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    state.document?.title ?: "Loading…",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = ForgeColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+        Row(
+            Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = ForgeColors.TextSecondary,
+                    modifier = Modifier.size(20.dp),
                 )
-                if (state.dirty) {
-                    Text(" •", color = ForgeColors.AccentWarm, style = MaterialTheme.typography.titleMedium)
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        titleDraft = state.document?.title ?: "Untitled"
+                        renaming = true
+                    }
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        state.document?.title ?: "Loading…",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ForgeColors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (state.dirty) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier
+                                .size(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(ForgeColors.AccentWarm),
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val doc = state.document
+                    Text(
+                        buildString {
+                            if (doc != null) {
+                                append("${doc.settings.width}×${doc.settings.height}")
+                                append(" · ")
+                                append(doc.layers.size)
+                                append(if (doc.layers.size == 1) " layer" else " layers")
+                                if (doc.kind == ProjectKind.Animation) append(" · ${doc.animation.fps} fps")
+                            }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ForgeColors.TextMuted,
+                        maxLines = 1,
+                    )
+                    if (state.saving) {
+                        Spacer(Modifier.width(8.dp))
+                        StatusChip("Saving…", color = ForgeColors.AccentWarm)
+                    }
                 }
             }
-            Text(
-                buildString {
-                    val doc = state.document
-                    if (doc != null) {
-                        append("${doc.settings.width}×${doc.settings.height}")
-                        append(" · ")
-                        append(doc.layers.size)
-                        append(" layers")
-                        if (doc.kind == ProjectKind.Animation) {
-                            append(" · ${doc.animation.fps}fps")
-                        }
-                    }
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = ForgeColors.TextMuted,
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(ForgeColors.GraphiteElevated)
+                    .padding(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GestureIconButton(
+                    Icons.AutoMirrored.Filled.Undo,
+                    "Undo",
+                    onUndo,
+                    enabled = state.canUndo,
+                    size = 36,
+                )
+                GestureIconButton(
+                    Icons.AutoMirrored.Filled.Redo,
+                    "Redo",
+                    onRedo,
+                    enabled = state.canRedo,
+                    size = 36,
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+            GestureIconButton(Icons.Filled.Save, "Save", onSave, size = 38)
+            GestureIconButton(
+                Icons.Filled.IosShare,
+                "Export",
+                onExport,
+                size = 38,
+                selected = true,
             )
-        }
-        IconButton(onClick = onUndo, enabled = state.canUndo) {
-            Icon(Icons.AutoMirrored.Filled.Undo, "Undo", tint = if (state.canUndo) ForgeColors.TextPrimary else ForgeColors.TextMuted)
-        }
-        IconButton(onClick = onRedo, enabled = state.canRedo) {
-            Icon(Icons.AutoMirrored.Filled.Redo, "Redo", tint = if (state.canRedo) ForgeColors.TextPrimary else ForgeColors.TextMuted)
-        }
-        IconButton(onClick = onSave) {
-            Icon(Icons.Filled.Save, "Save", tint = ForgeColors.TextPrimary)
-        }
-        Box {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Filled.MoreVert, "More", tint = ForgeColors.TextPrimary)
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(text = { Text("Export") }, onClick = { menuOpen = false; onExport() })
-                DropdownMenuItem(
-                    text = { Text("Rename project") },
-                    onClick = { menuOpen = false; titleDraft = state.document?.title ?: ""; renaming = true },
-                )
-                DropdownMenuItem(
-                    text = { Text(if (state.saving) "Saving…" else "Save now") },
-                    onClick = { menuOpen = false; onSave() },
-                )
+            Box {
+                GestureIconButton(Icons.Filled.MoreVert, "More", { menuOpen = true }, size = 38)
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Export…") },
+                        leadingIcon = { Icon(Icons.Filled.IosShare, null, modifier = Modifier.size(18.dp)) },
+                        onClick = { menuOpen = false; onExport() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Rename project") },
+                        onClick = {
+                            menuOpen = false
+                            titleDraft = state.document?.title ?: ""
+                            renaming = true
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (state.saving) "Saving…" else "Save now") },
+                        leadingIcon = { Icon(Icons.Filled.Save, null, modifier = Modifier.size(18.dp)) },
+                        onClick = { menuOpen = false; onSave() },
+                    )
+                }
             }
         }
+        Hairline()
     }
 
     if (renaming) {
@@ -459,22 +532,27 @@ fun ToolRail(
     modifier: Modifier = Modifier,
 ) {
     val scroll = rememberScrollState()
-    Box(modifier.background(ForgeColors.Graphite)) {
+    Column(
+        modifier
+            .background(ForgeColors.Graphite)
+            .padding(vertical = 6.dp),
+    ) {
         Column(
             Modifier
                 .verticalScroll(scroll)
-                .padding(vertical = 4.dp),
+                .padding(horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             var lastGroup: String? = null
             ToolCatalog.tools.forEach { spec ->
                 if (lastGroup != null && spec.group != lastGroup) {
                     Box(
                         Modifier
-                            .padding(vertical = 3.dp)
-                            .width(28.dp)
+                            .padding(vertical = 5.dp)
+                            .width(20.dp)
                             .height(1.dp)
-                            .background(ForgeColors.GraphiteBorder),
+                            .background(ForgeColors.Hairline),
                     )
                 }
                 lastGroup = spec.group
@@ -486,24 +564,44 @@ fun ToolRail(
 
 @Composable
 private fun ToolButton(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-            .size(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) ForgeColors.Accent.copy(alpha = 0.2f) else Color.Transparent)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            icon,
-            label,
-            tint = if (selected) ForgeColors.Accent else ForgeColors.TextSecondary,
-            modifier = Modifier.size(22.dp),
+    val bg by androidx.compose.animation.animateColorAsState(
+        targetValue = if (selected) ForgeColors.Accent.copy(alpha = 0.16f) else Color.Transparent,
+        animationSpec = androidx.compose.animation.core.tween(140),
+        label = "toolBg",
+    )
+    Box(contentAlignment = Alignment.Center) {
+        // Selection marker: a soft accent bar on the leading edge.
+        Box(
+            Modifier
+                .align(Alignment.CenterStart)
+                .width(3.dp)
+                .height(if (selected) 20.dp else 0.dp)
+                .clip(RoundedCornerShape(50))
+                .background(ForgeColors.Accent),
         )
+        Box(
+            Modifier
+                .padding(vertical = 2.dp)
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(bg)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                label,
+                tint = if (selected) ForgeColors.Accent else ForgeColors.TextSecondary,
+                modifier = Modifier.size(21.dp),
+            )
+        }
     }
 }
 
+/**
+ * Floating context bar under the canvas: the controls a painter reaches for constantly
+ * (colour, brush, layers, zoom) without leaving the artwork.
+ */
 @Composable
 private fun QuickActionBar(
     tools: ToolState,
@@ -524,45 +622,63 @@ private fun QuickActionBar(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(56.dp)
             .background(ForgeColors.Graphite)
-            .padding(horizontal = 6.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        ColorSwatch(tools.primaryColor, size = 30, selected = true, onClick = onColor)
-        ColorSwatch(tools.secondaryColor, size = 22, onClick = onColor)
-        Spacer(Modifier.width(6.dp))
-        IconButton(onClick = onBrush, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.Brush, "Brush library", tint = ForgeColors.TextSecondary, modifier = Modifier.size(20.dp))
+        // Colour stack: primary over secondary, like a real palette.
+        Box(
+            Modifier
+                .size(38.dp)
+                .clickable { onColor() },
+            contentAlignment = Alignment.BottomEnd,
+        ) {
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .size(26.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(tools.secondaryColor))
+                    .border(1.dp, ForgeColors.GraphiteBorder, RoundedCornerShape(8.dp)),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(26.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(tools.primaryColor))
+                    .border(2.dp, ForgeColors.Graphite, RoundedCornerShape(8.dp)),
+            )
         }
-        IconButton(onClick = onLayers, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.Layers, "Layers", tint = ForgeColors.TextSecondary, modifier = Modifier.size(20.dp))
-        }
-        IconButton(onClick = onEffects, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.AutoAwesome, "Effects", tint = ForgeColors.TextSecondary, modifier = Modifier.size(20.dp))
-        }
-        IconButton(onClick = onToolOptions, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.Tune, "Tool options", tint = ForgeColors.TextSecondary, modifier = Modifier.size(20.dp))
-        }
+        Spacer(Modifier.width(4.dp))
+        GestureIconButton(Icons.Filled.Brush, "Brush library", onBrush, size = 38)
+        GestureIconButton(Icons.Filled.Layers, "Layers", onLayers, size = 38)
+        GestureIconButton(Icons.Filled.AutoAwesome, "Effects", onEffects, size = 38)
+        GestureIconButton(Icons.Filled.Tune, "Tool options", onToolOptions, size = 38)
         Spacer(Modifier.weight(1f))
-        Text(
-            "${(view.zoom * 100).toInt()}%",
-            style = MaterialTheme.typography.labelMedium,
-            color = ForgeColors.TextMuted,
-        )
-        IconButton(onClick = onZoomOut, modifier = Modifier.size(34.dp)) {
-            Text("−", color = ForgeColors.TextSecondary, style = MaterialTheme.typography.titleLarge)
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(ForgeColors.GraphiteElevated)
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GestureIconButton(Icons.Filled.Remove, "Zoom out", onZoomOut, size = 32)
+            Text(
+                "${(view.zoom * 100).toInt()}%",
+                style = MaterialTheme.typography.labelMedium,
+                color = ForgeColors.TextSecondary,
+                modifier = Modifier
+                    .width(46.dp)
+                    .clickable { onFit() },
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            GestureIconButton(Icons.Filled.Add, "Zoom in", onZoomIn, size = 32)
         }
-        IconButton(onClick = onZoomIn, modifier = Modifier.size(34.dp)) {
-            Text("+", color = ForgeColors.TextSecondary, style = MaterialTheme.typography.titleLarge)
-        }
-        IconButton(onClick = onFit, modifier = Modifier.size(34.dp)) {
-            Icon(Icons.Filled.Palette, "Fit", tint = ForgeColors.TextSecondary, modifier = Modifier.size(18.dp))
-        }
-        IconButton(onClick = onRotate, modifier = Modifier.size(34.dp)) {
-            Icon(Icons.Filled.Close, "Rotate", tint = ForgeColors.TextSecondary, modifier = Modifier.size(18.dp))
-        }
+        GestureIconButton(Icons.Filled.CenterFocusStrong, "Fit to screen", onFit, size = 38)
+        GestureIconButton(Icons.Filled.RotateRight, "Rotate canvas", onRotate, size = 38)
     }
 }
 
@@ -578,38 +694,43 @@ private fun CompactTimeline(
     onScrub: (Int) -> Unit,
 ) {
     val frames = state.document?.animation?.frameCount ?: 1
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .background(ForgeColors.Graphite)
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onPrev) { Text("◀", color = ForgeColors.TextSecondary) }
-        IconButton(onClick = onTogglePlay) {
-            Icon(
-                if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                "Play",
-                tint = ForgeColors.Accent,
-            )
-        }
-        IconButton(onClick = onNext) { Text("▶", color = ForgeColors.TextSecondary) }
-        Column(Modifier.weight(1f)) {
-            androidx.compose.material3.Slider(
-                value = state.frame.toFloat(),
-                onValueChange = { onScrub(it.toInt()) },
-                valueRange = 0f..(frames - 1).coerceAtLeast(1).toFloat(),
-                modifier = Modifier.height(24.dp),
-            )
-            Text(
-                "Frame ${state.frame + 1} / $frames",
-                style = MaterialTheme.typography.labelSmall,
-                color = ForgeColors.TextMuted,
-            )
-        }
-        TextButton(onClick = onExpand) {
-            Text("Timeline", style = MaterialTheme.typography.labelMedium)
+    Column(Modifier.fillMaxWidth().background(ForgeColors.Graphite)) {
+        Hairline()
+        Row(
+            Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GestureIconButton(Icons.Filled.SkipPrevious, "Previous frame", onPrev, size = 36)
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(ForgeColors.Accent)
+                    .clickable { onTogglePlay() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = Color(0xFF0B0C0F),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            GestureIconButton(Icons.Filled.SkipNext, "Next frame", onNext, size = 36)
+            Column(Modifier.weight(1f).padding(horizontal = 6.dp)) {
+                androidx.compose.material3.Slider(
+                    value = state.frame.toFloat(),
+                    onValueChange = { onScrub(it.toInt()) },
+                    valueRange = 0f..(frames - 1).coerceAtLeast(1).toFloat(),
+                    modifier = Modifier.height(22.dp),
+                )
+                Text(
+                    "Frame ${state.frame + 1} / $frames",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ForgeColors.TextMuted,
+                )
+            }
+            PillButton("Timeline", onExpand, icon = Icons.Filled.ViewTimeline)
         }
     }
 }

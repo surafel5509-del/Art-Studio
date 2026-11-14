@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,7 +71,12 @@ import com.artforge.mobile.core.model.ProjectKind
 import com.artforge.mobile.core.model.ProjectSummary
 import com.artforge.mobile.data.asset.AssetLibrary
 import com.artforge.mobile.data.asset.CanvasTemplate
+import com.artforge.mobile.ui.common.ForgeCard
+import com.artforge.mobile.ui.common.GestureIconButton
+import com.artforge.mobile.ui.common.MicroLabel
+import com.artforge.mobile.ui.common.StatusChip
 import com.artforge.mobile.ui.theme.ForgeColors
+import com.artforge.mobile.ui.theme.forgeAccentGradient
 
 /**
  * Home screen: create actions, recent projects, templates, recovery and settings.
@@ -107,21 +114,26 @@ fun HomeScreen(
     }
 
     Box(Modifier.fillMaxSize().background(ForgeColors.Charcoal)) {
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 24.dp,
+            ),
+        ) {
             item {
-                Spacer(Modifier.height(28.dp))
-                Text(
-                    "ARTFORGE",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = ForgeColors.TextPrimary,
-                    fontWeight = FontWeight.Black,
-                )
-                Text(
-                    "Professional art & animation studio",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ForgeColors.TextMuted,
-                )
                 Spacer(Modifier.height(20.dp))
+                HomeHero(
+                    projectCount = recents.size,
+                    onNew = {
+                        newKind = ProjectKind.Illustration
+                        showNewDialog = true
+                    },
+                    onSettings = onOpenSettings,
+                    onHelp = onOpenHelp,
+                )
+                Spacer(Modifier.height(18.dp))
             }
 
             item {
@@ -176,18 +188,30 @@ fun HomeScreen(
 
             if (recents.isEmpty()) {
                 item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(ForgeColors.Graphite),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    ForgeCard(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ForgeColors.GraphiteRaised),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Filled.Brush,
+                                    contentDescription = null,
+                                    tint = ForgeColors.TextMuted,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
                             Text("No projects yet", style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextSecondary)
+                            Spacer(Modifier.height(3.dp))
                             Text(
-                                "Create a canvas to get started",
+                                "Pick a canvas type above to start",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = ForgeColors.TextMuted,
                             )
@@ -207,7 +231,9 @@ fun HomeScreen(
             }
 
             item {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(24.dp))
+                Box(Modifier.fillMaxWidth().height(1.dp).background(ForgeColors.Hairline))
+                Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SmallAction("Settings", Icons.Filled.Settings, onOpenSettings)
                     SmallAction("Assets", Icons.Filled.Collections, onOpenAssets)
@@ -234,14 +260,68 @@ fun HomeScreen(
     }
 }
 
+/**
+ * The first thing a user sees: a compact brand block with the primary action, so the
+ * home screen reads as a launcher rather than a settings page.
+ */
+@Composable
+private fun HomeHero(
+    projectCount: Int,
+    onNew: () -> Unit,
+    onSettings: () -> Unit,
+    onHelp: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(26.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(forgeAccentGradient.let { androidx.compose.ui.graphics.Brush.linearGradient(it) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Brush,
+                        contentDescription = null,
+                        tint = Color(0xFF0B0C0F),
+                        modifier = Modifier.size(15.dp),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "ARTFORGE",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = ForgeColors.TextPrimary,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                if (projectCount == 0) "Professional art & animation studio"
+                else "$projectCount project${if (projectCount == 1) "" else "s"} on this device",
+                style = MaterialTheme.typography.bodyMedium,
+                color = ForgeColors.TextMuted,
+            )
+        }
+        GestureIconButton(Icons.AutoMirrored.Filled.Help, "Help", onHelp, size = 40)
+        GestureIconButton(Icons.Filled.Settings, "Settings", onSettings, size = 40)
+    }
+}
+
 @Composable
 private fun SectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        color = ForgeColors.TextSecondary,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MicroLabel(text)
+        Spacer(Modifier.width(10.dp))
+        Box(Modifier.weight(1f).height(1.dp).background(ForgeColors.Hairline))
+    }
 }
 
 @Composable
@@ -284,55 +364,80 @@ private fun CreateCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Card(
-        modifier = modifier.height(96.dp).clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = ForgeColors.Graphite),
-        shape = RoundedCornerShape(16.dp),
+    Box(
+        modifier
+            .height(104.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(accent.copy(alpha = 0.14f), ForgeColors.Graphite),
+                ),
+            )
+            .border(1.dp, accent.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
+            .clickable { onClick() },
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.fillMaxSize().padding(14.dp)) {
             Box(
                 Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(accent.copy(alpha = 0.18f)),
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(accent.copy(alpha = 0.20f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, title, tint = accent, modifier = Modifier.size(18.dp))
             }
-            Spacer(Modifier.height(8.dp))
-            Text(title, style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextPrimary)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextMuted)
+            Spacer(Modifier.weight(1f))
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = ForgeColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextMuted, maxLines = 1)
         }
     }
 }
 
 @Composable
 private fun TemplateCard(template: CanvasTemplate, onClick: () -> Unit) {
-    val accent = runCatching { Color(android.graphics.Color.parseColor(template.accent)) }.getOrDefault(ForgeColors.Accent)
+    val accent = runCatching { Color(android.graphics.Color.parseColor(template.accent)) }
+        .getOrDefault(ForgeColors.Accent)
     Column(
         Modifier
-            .width(132.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .width(140.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(ForgeColors.Graphite)
+            .border(1.dp, ForgeColors.Hairline, RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(10.dp),
+            .padding(8.dp),
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(accent.copy(alpha = 0.22f)),
+                .height(72.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(
+                    androidx.compose.ui.graphics.Brush.linearGradient(
+                        listOf(accent.copy(alpha = 0.26f), accent.copy(alpha = 0.08f)),
+                    ),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "${template.width}×${template.height}",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = accent,
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(template.name, style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            template.name,
+            style = MaterialTheme.typography.titleSmall,
+            color = ForgeColors.TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Text(template.category, style = MaterialTheme.typography.labelSmall, color = ForgeColors.TextMuted)
     }
 }
@@ -352,64 +457,102 @@ private fun ProjectCard(
             runCatching { BitmapFactory.decodeFile(path) }.getOrNull()
         }
     }
-    Row(
+    Column(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 5.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(ForgeColors.Graphite)
-            .clickable { onOpen() }
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .border(1.dp, ForgeColors.Hairline, RoundedCornerShape(16.dp))
+            .clickable { onOpen() },
     ) {
-        Box(
-            Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(ForgeColors.GraphiteElevated),
-            contentAlignment = Alignment.Center,
+        Row(
+            Modifier.fillMaxWidth().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (thumb != null) {
-                Image(
-                    thumb.asImageBitmap(),
-                    contentDescription = project.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Icon(
-                    when (project.kind) {
-                        ProjectKind.Animation -> Icons.Filled.Animation
-                        ProjectKind.Comic -> Icons.AutoMirrored.Filled.MenuBook
-                        ProjectKind.PixelArt -> Icons.Filled.GridOn
-                        else -> Icons.Filled.Palette
-                    },
-                    contentDescription = null,
-                    tint = ForgeColors.TextMuted,
+            Box(
+                Modifier
+                    .size(66.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(ForgeColors.GraphiteElevated)
+                    .border(1.dp, ForgeColors.Hairline, RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (thumb != null) {
+                    Image(
+                        thumb.asImageBitmap(),
+                        contentDescription = project.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(
+                        when (project.kind) {
+                            ProjectKind.Animation -> Icons.Filled.Animation
+                            ProjectKind.Comic -> Icons.AutoMirrored.Filled.MenuBook
+                            ProjectKind.PixelArt -> Icons.Filled.GridOn
+                            else -> Icons.Filled.Palette
+                        },
+                        contentDescription = null,
+                        tint = ForgeColors.TextMuted,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        project.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ForgeColors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (project.favorite) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = "Favourite",
+                            tint = ForgeColors.Warning,
+                            modifier = Modifier.size(13.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusChip(project.kind.name, color = ForgeColors.AccentSoft)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "${project.width}×${project.height}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ForgeColors.TextMuted,
+                    )
+                    if (project.kind == ProjectKind.Animation) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "${project.frameCount} frames",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ForgeColors.TextMuted,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    relativeTime(project.modifiedAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ForgeColors.TextMuted,
                 )
             }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(project.title, style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                "${project.kind.name} · ${project.width}×${project.height}" +
-                    if (project.kind == ProjectKind.Animation) " · ${project.frameCount} frames" else "",
-                style = MaterialTheme.typography.bodySmall,
-                color = ForgeColors.TextMuted,
-            )
-            Text(
-                java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                    .format(java.util.Date(project.modifiedAt)),
-                style = MaterialTheme.typography.labelSmall,
-                color = ForgeColors.TextMuted,
-            )
-        }
-        Box {
-            IconButton(onClick = { menu = true }) {
-                Icon(Icons.Filled.MoreVert, "More", tint = ForgeColors.TextMuted)
+            IconButton(onClick = { menu = true }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Filled.MoreVert, "More", tint = ForgeColors.TextMuted, modifier = Modifier.size(18.dp))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(
+                    text = { Text(if (project.favorite) "Remove favourite" else "Favourite") },
+                    onClick = { menu = false; onToggleFavorite(!project.favorite) },
+                )
                 DropdownMenuItem(text = { Text("Duplicate") }, onClick = { menu = false; onDuplicate() })
                 DropdownMenuItem(text = { Text("Delete") }, onClick = { menu = false; confirmDelete = true })
             }
@@ -429,6 +572,22 @@ private fun ProjectCard(
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/** "2h ago" style timestamps read faster than a full locale date on a launcher list. */
+private fun relativeTime(millis: Long): String {
+    val delta = System.currentTimeMillis() - millis
+    val minute = 60_000L
+    val hour = 60 * minute
+    val day = 24 * hour
+    return when {
+        delta < minute -> "Just now"
+        delta < hour -> "${delta / minute} min ago"
+        delta < day -> "${delta / hour} h ago"
+        delta < 7 * day -> "${delta / day} d ago"
+        else -> java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+            .format(java.util.Date(millis))
     }
 }
 
