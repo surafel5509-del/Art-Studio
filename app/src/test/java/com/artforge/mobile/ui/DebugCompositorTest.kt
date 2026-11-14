@@ -29,6 +29,8 @@ class DebugCompositorTest {
             val comp = com.artforge.mobile.engine.draw.Compositor(store)
             comp.composite(doc, target, 0, includeBackground = true)
             println("DBG composite centre=${target.getPixel(1000,1500)} corner=${target.getPixel(5,5)}")
+            println("DBG layer: opacity=${layer.opacity} blend=${layer.blendMode} transformIdentity=${layer.transform.isIdentity} mask=${layer.maskFrameId} clip=${layer.clippingMask}")
+            println("DBG section2: same=${bmp === doc.layers[0].let { store.load(doc.id, it.activeFrameId!!, 2000, 3000) }}")
             val loaded2 = store.load(doc.id, fid, 2000, 3000)
             println("DBG after composite px=${loaded2.getPixel(1000,1500)} same=${loaded2 === bmp}")
         }
