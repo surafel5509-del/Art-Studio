@@ -57,15 +57,12 @@ class LargeDocumentRenderTest {
         val state = vm.state.value
         assertFalse("render reported: ${state.statusMessage}", state.statusMessage?.startsWith("Display error") == true)
         assertNotNull("a 2000x3000 document produced no composite", state.composite)
-        assertEquals(2000, state.canvasWidth)
-        assertEquals(3000, state.canvasHeight)
+        org.junit.Assert.assertEquals(2000, state.canvasWidth)
+        org.junit.Assert.assertEquals(3000, state.canvasHeight)
         // The composited image must have real size, not a 1x1 fallback.
         val image = state.composite!!
-        assertEquals(2000, image.width)
-        assertEquals(3000, image.height)
+        org.junit.Assert.assertEquals(2000, image.width)
+        org.junit.Assert.assertEquals(3000, image.height)
         vm.releaseResourcesForTest()
     }
-
-    private fun assertEquals(expected: Int, actual: Int) =
-        org.junit.Assert.assertEquals(expected, actual)
 }
