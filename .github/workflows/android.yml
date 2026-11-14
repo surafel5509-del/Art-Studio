@@ -52,7 +52,7 @@ jobs:
         run: |
           # Diagnostic prints from tests, surfaced on failure so they are readable
           # without downloading the (large, often unreachable) log artifact.
-          grep -E "^(DBG|PROBE) " build.log | head -20 | while IFS= read -r line; do
+          grep -hE "^(DBG|PROBE) " build.log app/build/test-results/**/*.xml 2>/dev/null | head -20 | while IFS= read -r line; do
             echo "::warning::${line:0:400}"
           done || true
           emit() {
