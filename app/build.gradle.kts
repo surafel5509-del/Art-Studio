@@ -42,8 +42,8 @@ android {
         targetSdk = 34
         // Bumped on every user-visible build so a sideloaded APK can be identified in
         // Settings > Apps and so Android will install it over an older build.
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         resourceConfigurations += listOf("en")

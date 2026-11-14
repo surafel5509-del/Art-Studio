@@ -6,9 +6,25 @@ preferences, WorkManager for background maintenance/export, and the platform med
 video and audio. **No WebView, no remote services, no login** — the app is fully usable in
 airplane mode.
 
-- **Min SDK 29** (Android 10) · target/compile SDK 34
+- **Version 1.1.0** (versionCode 3) · **Min SDK 29** (Android 10) · target/compile SDK 34
 - Phones, tablets, foldables and stylus input; portrait and landscape
 - Package id `com.artforge.mobile` (debug builds install as `com.artforge.mobile.debug`)
+
+---
+
+## What changed in 1.1.0
+
+- **Black canvas fixed.** Portrait and large documents (2000×3000 and up) showed an empty
+  black workspace because the render loop allocated a full-resolution copy of every frame and
+  ran out of memory; the resulting `OutOfMemoryError` was swallowed and no composite was ever
+  published. The display buffer is now capped at 4.2 MP with rotating buffers, the extra copy
+  is gone, and the canvas draws its sheet/paper immediately instead of showing a void.
+- **Redesigned interface.** A new palette, type scale and shape language, a card-based home
+  screen with a real hero and richer project rows, a grouped tool rail with a selection marker,
+  a floating canvas toolbar, and restyled layers / colour / brush / export / settings / help /
+  recovery screens built on shared primitives (`ui/common/DesignSystem.kt`).
+- **Visible failures.** A failed canvas render now shows a banner with the reason and a Retry
+  action instead of failing silently.
 
 ---
 
