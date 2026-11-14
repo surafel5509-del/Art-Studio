@@ -13,6 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import androidx.compose.ui.graphics.asAndroidBitmap
 
 /**
@@ -21,6 +22,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
  * nothing for it while smaller documents worked.
  */
 @RunWith(AndroidJUnit4::class)
+// NATIVE graphics is required: Robolectric's legacy Canvas is a no-op, so without this a
+// "the canvas is blank" assertion passes for the wrong reason and a real draw is invisible.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [29])
 class LargeDocumentRenderTest {
 
@@ -62,18 +66,30 @@ class LargeDocumentRenderTest {
         org.junit.Assert.assertEquals(3000, state.canvasHeight)
         // The composite must actually look like a white sheet: if the layer draw fails the
         // bitmap stays transparent and the user sees the black canvas background.
-        val probe = state.composite!!.asAndroidBitmap()
-        val corner = probe.getPixel(5, 5)
+        val image = state.composite!!
+        val probe = image.asAndroidBitmap()
         val centre = probe.getPixel(probe.width / 2, probe.height / 2)
-        println("PROBE corner=#%08X centre=#%08X".format(corner, centre))
         org.junit.Assert.assertTrue(
             "canvas centre is transparent: the layer never drew (centre=#%08X)".format(centre),
             android.graphics.Color.alpha(centre) > 0,
         )
-        // The composited image must have real size, not a 1x1 fallback.
-        val image = state.composite!!
-        org.junit.Assert.assertEquals(2000, image.width)
-        org.junit.Assert.assertEquals(3000, image.height)
+
+        // The display bitmap is capped so a big document cannot exhaust the heap; the
+        // aspect ratio must be preserved so the sheet is not stretched.
+        val aspect = image.width.toFloat() / image.height.toFloat()
+        org.junit.Assert.assertEquals("aspect ratio", 2000f / 3000f, aspect, 0.01f)
+        org.junit.Assert.assertNotNull("no display bitmap", vm.currentDisplayForTest())
+
+        // Zoom to fit must map the whole sheet inside the viewport.
+        val t = com.artforge.mobile.ui.studio.CanvasTransform(
+            viewportWidth = 1080f,
+            viewportHeight = 1920f,
+            documentWidth = 2000f,
+            documentHeight = 3000f,
+            view = com.artforge.mobile.ui.studio.CanvasView(),
+        )
+        org.junit.Assert.assertTrue("sheet wider than viewport", t.displayWidth <= 1080f + 0.5f)
+        org.junit.Assert.assertTrue("sheet taller than viewport", t.displayHeight <= 1920f + 0.5f)
         vm.releaseResourcesForTest()
     }
 }

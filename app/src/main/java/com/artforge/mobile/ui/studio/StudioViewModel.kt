@@ -2216,6 +2216,9 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** The bitmap currently handed to the canvas (used by rendering regression tests). */
+    fun currentDisplayForTest(): Bitmap? = displayBitmap
+
     /**
      * Cancels the background loops and releases engine memory. `onCleared` is protected,
      * so tests (which drive the view model directly) need this explicit hook.
