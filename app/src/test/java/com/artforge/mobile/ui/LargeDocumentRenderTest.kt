@@ -13,6 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import androidx.compose.ui.graphics.asAndroidBitmap
 
 /**
  * Regression test for the black canvas: a portrait 2000x3000 document (6 MP, the default
@@ -59,6 +60,16 @@ class LargeDocumentRenderTest {
         assertNotNull("a 2000x3000 document produced no composite", state.composite)
         org.junit.Assert.assertEquals(2000, state.canvasWidth)
         org.junit.Assert.assertEquals(3000, state.canvasHeight)
+        // The composite must actually look like a white sheet: if the layer draw fails the
+        // bitmap stays transparent and the user sees the black canvas background.
+        val probe = state.composite!!.asAndroidBitmap()
+        val corner = probe.getPixel(5, 5)
+        val centre = probe.getPixel(probe.width / 2, probe.height / 2)
+        println("PROBE corner=#%08X centre=#%08X".format(corner, centre))
+        org.junit.Assert.assertTrue(
+            "canvas centre is transparent: the layer never drew (centre=#%08X)".format(centre),
+            android.graphics.Color.alpha(centre) > 0,
+        )
         // The composited image must have real size, not a 1x1 fallback.
         val image = state.composite!!
         org.junit.Assert.assertEquals(2000, image.width)
