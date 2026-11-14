@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.artforge.mobile.ui.theme.ForgeColors
 
@@ -26,11 +29,16 @@ import com.artforge.mobile.ui.theme.ForgeColors
 @Composable
 fun HelpScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(ForgeColors.Charcoal)) {
-        Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = ForgeColors.TextPrimary) }
+        Row(
+            Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GestureIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack, size = 42)
+            Spacer(Modifier.width(6.dp))
             Text("Help & shortcuts", style = MaterialTheme.typography.titleLarge, color = ForgeColors.TextPrimary)
         }
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Hairline()
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
             HelpSection("Gestures", listOf(
                 "One finger — draw (when enabled in settings)",
                 "Two fingers — pan, pinch-zoom, twist-rotate",
@@ -68,15 +76,27 @@ fun HelpScreen(onBack: () -> Unit) {
 
 @Composable
 private fun HelpSection(title: String, lines: List<String>) {
-    Text(title, style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextPrimary)
-    Spacer(Modifier.height(4.dp))
-    lines.forEach { line ->
-        Text(
-            line,
-            style = MaterialTheme.typography.bodySmall,
-            color = ForgeColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 1.dp),
-        )
+    MicroLabel(title, modifier = Modifier.padding(start = 2.dp, top = 4.dp, bottom = 8.dp))
+    ForgeCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), padding = 14) {
+        lines.forEachIndexed { index, line ->
+            Row(Modifier.padding(vertical = 2.dp)) {
+                Box(
+                    Modifier
+                        .padding(top = 6.dp)
+                        .size(4.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(
+                            if (line.startsWith("Limitations")) ForgeColors.Warning
+                            else ForgeColors.Accent.copy(alpha = 0.8f),
+                        ),
+                )
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    line,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ForgeColors.TextSecondary,
+                )
+            }
+        }
     }
-    Spacer(Modifier.height(14.dp))
 }
