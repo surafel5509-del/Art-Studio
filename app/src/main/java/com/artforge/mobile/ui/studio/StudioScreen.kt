@@ -673,7 +673,7 @@ private fun QuickActionBar(
             .fillMaxWidth()
             .height(56.dp)
             .background(ForgeColors.Graphite)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -701,11 +701,12 @@ private fun QuickActionBar(
                     .border(2.dp, ForgeColors.Graphite, RoundedCornerShape(8.dp)),
             )
         }
-        Spacer(Modifier.width(4.dp))
-        GestureIconButton(Icons.Filled.Brush, "Brush library", onBrush, size = 38)
-        GestureIconButton(Icons.Filled.Layers, "Layers", onLayers, size = 38)
-        GestureIconButton(Icons.Filled.AutoAwesome, "Effects", onEffects, size = 38)
-        GestureIconButton(Icons.Filled.Tune, "Tool options", onToolOptions, size = 38)
+        Spacer(Modifier.width(2.dp))
+        // 36dp keeps six controls plus the zoom pill inside a 411dp phone without wrapping.
+        GestureIconButton(Icons.Filled.Brush, "Brush library", onBrush, size = 36)
+        GestureIconButton(Icons.Filled.Layers, "Layers", onLayers, size = 36)
+        GestureIconButton(Icons.Filled.AutoAwesome, "Effects", onEffects, size = 36)
+        GestureIconButton(Icons.Filled.Tune, "Tool options", onToolOptions, size = 36)
         Spacer(Modifier.weight(1f))
         Row(
             Modifier
@@ -714,20 +715,21 @@ private fun QuickActionBar(
                 .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GestureIconButton(Icons.Filled.Remove, "Zoom out", onZoomOut, size = 32)
+            GestureIconButton(Icons.Filled.Remove, "Zoom out", onZoomOut, size = 30)
             Text(
                 "${(view.zoom * 100).toInt()}%",
                 style = MaterialTheme.typography.labelMedium,
                 color = ForgeColors.TextSecondary,
                 modifier = Modifier
-                    .width(46.dp)
+                    .width(42.dp)
                     .clickable { onFit() },
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1,
             )
-            GestureIconButton(Icons.Filled.Add, "Zoom in", onZoomIn, size = 32)
+            GestureIconButton(Icons.Filled.Add, "Zoom in", onZoomIn, size = 30)
         }
-        GestureIconButton(Icons.Filled.CenterFocusStrong, "Fit to screen", onFit, size = 38)
-        GestureIconButton(Icons.Filled.RotateRight, "Rotate canvas", onRotate, size = 38)
+        GestureIconButton(Icons.Filled.CenterFocusStrong, "Fit to screen", onFit, size = 36)
+        GestureIconButton(Icons.Filled.RotateRight, "Rotate canvas", onRotate, size = 36)
     }
 }
 
