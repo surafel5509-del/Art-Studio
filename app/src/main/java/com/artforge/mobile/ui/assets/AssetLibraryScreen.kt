@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -48,6 +50,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.artforge.mobile.data.asset.AssetCategory
 import com.artforge.mobile.data.db.AssetEntity
+import com.artforge.mobile.ui.common.GestureIconButton
+import com.artforge.mobile.ui.common.Hairline
+import com.artforge.mobile.ui.common.PillButton
 import com.artforge.mobile.ui.theme.ForgeColors
 
 /**
@@ -64,14 +69,28 @@ fun AssetLibraryScreen(onBack: () -> Unit, vm: AssetLibraryViewModel = viewModel
     }
 
     Column(Modifier.fillMaxSize().background(ForgeColors.Charcoal)) {
-        Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = ForgeColors.TextPrimary) }
-            Text("Asset library", style = MaterialTheme.typography.titleLarge, color = ForgeColors.TextPrimary)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { importLauncher.launch(arrayOf("image/*", "application/octet-stream")) }) {
-                Icon(Icons.Filled.FileUpload, "Import", tint = ForgeColors.TextSecondary)
+        Row(
+            Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GestureIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack, size = 42)
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Asset library", style = MaterialTheme.typography.titleLarge, color = ForgeColors.TextPrimary)
+                Text(
+                    "${assets.size} offline assets",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ForgeColors.TextMuted,
+                )
             }
+            GestureIconButton(
+                Icons.Filled.FileUpload,
+                "Import asset",
+                { importLauncher.launch(arrayOf("image/*", "application/octet-stream")) },
+                size = 42,
+            )
         }
+        Hairline()
 
         OutlinedTextField(
             value = query,
@@ -82,21 +101,22 @@ fun AssetLibraryScreen(onBack: () -> Unit, vm: AssetLibraryViewModel = viewModel
             leadingIcon = { Icon(Icons.Filled.Search, null, tint = ForgeColors.TextMuted) },
             placeholder = { Text("Search assets") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         )
 
         LazyRow(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items(AssetCategory.entries.toList()) { cat ->
                 Box(
                     Modifier
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(if (category == cat) ForgeColors.Accent else ForgeColors.Graphite)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (category == cat) ForgeColors.Accent else ForgeColors.GraphiteRaised)
                         .clickable { category = cat }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 13.dp, vertical = 7.dp),
                 ) {
                     Text(
                         cat.label,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelLarge,
                         color = if (category == cat) Color(0xFF0B0C0F) else ForgeColors.TextSecondary,
                     )
                 }
@@ -127,17 +147,12 @@ fun AssetLibraryScreen(onBack: () -> Unit, vm: AssetLibraryViewModel = viewModel
                     color = ForgeColors.TextMuted,
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(ForgeColors.Accent)
-                        .clickable { vm.generateBuiltInTextures() }
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                ) {
-                    Icon(Icons.Filled.Add, null, tint = Color(0xFF0B0C0F), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Generate built-in textures", style = MaterialTheme.typography.labelMedium, color = Color(0xFF0B0C0F))
-                }
+                PillButton(
+                    "Generate built-in textures",
+                    { vm.generateBuiltInTextures() },
+                    selected = true,
+                    icon = Icons.Filled.AutoAwesome,
+                )
             }
         } else {
             LazyVerticalGrid(columns = GridCells.Adaptive(104.dp), modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -155,15 +170,16 @@ private fun AssetTile(asset: AssetEntity) {
     Column(
         Modifier
             .padding(4.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(ForgeColors.Graphite)
+            .border(1.dp, ForgeColors.Hairline, RoundedCornerShape(14.dp))
             .padding(6.dp),
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(78.dp)
-                .clip(RoundedCornerShape(7.dp))
+                .height(84.dp)
+                .clip(RoundedCornerShape(9.dp))
                 .background(ForgeColors.GraphiteElevated),
             contentAlignment = Alignment.Center,
         ) {
@@ -176,8 +192,8 @@ private fun AssetTile(asset: AssetEntity) {
                 )
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(asset.name, style = MaterialTheme.typography.labelSmall, color = ForgeColors.TextPrimary, maxLines = 1)
+        Spacer(Modifier.height(6.dp))
+        Text(asset.name, style = MaterialTheme.typography.titleSmall, color = ForgeColors.TextPrimary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text(
             AssetCategory.fromKey(asset.category).label,
             style = MaterialTheme.typography.labelSmall,

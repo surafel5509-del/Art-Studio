@@ -65,7 +65,18 @@ fun ExportDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export") },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = ForgeColors.Graphite,
+        title = {
+            Column {
+                Text("Export", style = MaterialTheme.typography.headlineSmall, color = ForgeColors.TextPrimary)
+                Text(
+                    "${document.settings.width}×${document.settings.height} · ${document.layers.size} layers",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ForgeColors.TextMuted,
+                )
+            }
+        },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -73,7 +84,7 @@ fun ExportDialog(
                     if (isAnimation) TabChip("Animation", tab == 1) { tab = 1 }
                     TabChip("Sprite sheet", tab == 2) { tab = 2 }
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
 
                 when (tab) {
                     0 -> {
@@ -172,9 +183,9 @@ fun ExportDialog(
                         ),
                     )
                 }
-            }) { Text("Export") }
+            }) { Text("Export", style = MaterialTheme.typography.labelLarge) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = ForgeColors.TextSecondary) } },
     )
 }
 
@@ -183,14 +194,14 @@ private fun TabChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (selected) ForgeColors.Accent else ForgeColors.GraphiteElevated)
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) ForgeColors.Accent else ForgeColors.GraphiteRaised)
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 13.dp, vertical = 7.dp),
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             color = if (selected) Color(0xFF0B0C0F) else ForgeColors.TextSecondary,
         )
     }

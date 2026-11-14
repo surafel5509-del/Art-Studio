@@ -38,6 +38,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.artforge.mobile.data.settings.CanvasScale
 import com.artforge.mobile.data.settings.GridStyle
 import com.artforge.mobile.data.settings.ThemeMode
+import com.artforge.mobile.ui.common.ForgeCard
+import com.artforge.mobile.ui.common.GestureIconButton
+import com.artforge.mobile.ui.common.Hairline
+import com.artforge.mobile.ui.common.MicroLabel
 import com.artforge.mobile.ui.common.PanelHeader
 import com.artforge.mobile.ui.common.ToggleRow
 import com.artforge.mobile.ui.common.ValueSlider
@@ -53,10 +57,20 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     Column(Modifier.fillMaxSize().background(ForgeColors.Charcoal)) {
-        Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = ForgeColors.TextPrimary) }
+        Row(
+            Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GestureIconButton(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                "Back",
+                onBack,
+                size = 42,
+            )
+            Spacer(Modifier.width(6.dp))
             Text("Settings", style = MaterialTheme.typography.titleLarge, color = ForgeColors.TextPrimary)
         }
+        Hairline()
         Column(Modifier.verticalScroll(rememberScrollState())) {
 
             SettingsSection("Interface") {
@@ -196,10 +210,11 @@ fun SettingsScreen(
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        PanelHeader(title)
-        Column(Modifier.fillMaxWidth().background(ForgeColors.Graphite), content = content)
-        Spacer(Modifier.height(6.dp))
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+        MicroLabel(title, modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 8.dp))
+        ForgeCard(Modifier.fillMaxWidth(), padding = 2) {
+            Column(Modifier.fillMaxWidth(), content = content)
+        }
     }
 }
 
@@ -209,14 +224,14 @@ private fun ChipRow(options: List<String>, selected: String, onSelect: (String) 
         options.forEach { option ->
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (option == selected) ForgeColors.Accent else ForgeColors.GraphiteElevated)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (option == selected) ForgeColors.Accent else ForgeColors.GraphiteRaised)
                     .clickable { onSelect(option) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(horizontal = 13.dp, vertical = 7.dp),
             ) {
                 Text(
                     option.replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelLarge,
                     color = if (option == selected) Color(0xFF0B0C0F) else ForgeColors.TextSecondary,
                 )
             }
