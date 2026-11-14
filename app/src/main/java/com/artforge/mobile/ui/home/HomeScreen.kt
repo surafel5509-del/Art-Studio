@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -510,15 +509,6 @@ private fun ProjectCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (project.favorite) {
-                        Spacer(Modifier.width(6.dp))
-                        Icon(
-                            Icons.Filled.Star,
-                            contentDescription = "Favourite",
-                            tint = ForgeColors.Warning,
-                            modifier = Modifier.size(13.dp),
-                        )
-                    }
                 }
                 Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -549,10 +539,6 @@ private fun ProjectCard(
                 Icon(Icons.Filled.MoreVert, "More", tint = ForgeColors.TextMuted, modifier = Modifier.size(18.dp))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(
-                    text = { Text(if (project.favorite) "Remove favourite" else "Favourite") },
-                    onClick = { menu = false; onToggleFavorite(!project.favorite) },
-                )
                 DropdownMenuItem(text = { Text("Duplicate") }, onClick = { menu = false; onDuplicate() })
                 DropdownMenuItem(text = { Text("Delete") }, onClick = { menu = false; confirmDelete = true })
             }
@@ -595,15 +581,16 @@ private fun relativeTime(millis: Long): String {
 private fun SmallAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(
         Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(ForgeColors.Graphite)
+            .clip(RoundedCornerShape(50))
+            .background(ForgeColors.GraphiteElevated)
+            .border(1.dp, ForgeColors.Hairline, RoundedCornerShape(50))
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, label, tint = ForgeColors.TextSecondary, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = ForgeColors.TextSecondary)
+        Icon(icon, label, tint = ForgeColors.TextSecondary, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = ForgeColors.TextSecondary)
     }
 }
 
