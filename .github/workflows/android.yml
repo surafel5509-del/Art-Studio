@@ -50,8 +50,11 @@ jobs:
       - name: Report diagnostics
         if: failure()
         run: |
-          # Temporary: echo diagnostic prints so they are readable as annotations.
-          grep -E "DBG |PROBE " build.log | head -20 | while IFS= read -r line; do echo "::warning::$line"; done || true
+          # Diagnostic prints from tests, surfaced on failure so they are readable
+          # without downloading the (large, often unreachable) log artifact.
+          grep -E "^(DBG|PROBE) " build.log | head -20 | while IFS= read -r line; do
+            echo "::warning::${line:0:400}"
+          done || true
           emit() {
             clean=${1//'%'/'%25'}
             clean=${clean//$'\r'/''}
