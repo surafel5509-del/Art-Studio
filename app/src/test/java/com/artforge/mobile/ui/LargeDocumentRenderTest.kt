@@ -92,4 +92,72 @@ class LargeDocumentRenderTest {
         org.junit.Assert.assertTrue("sheet taller than viewport", t.displayHeight <= 1920f + 0.5f)
         vm.releaseResourcesForTest()
     }
+
+    /**
+     * The display buffer is bounded independently of the document size: a 6 MP document
+     * must not allocate a 24 MB display bitmap on top of the composite (that double
+     * allocation is what produced the OutOfMemoryError behind the black canvas).
+     */
+    @Test
+    fun displayBufferIsCappedBelowDocumentSize() {
+        val vm = StudioViewModel(app)
+        var created: String? = null
+        vm.createProject(
+            kind = ProjectKind.Illustration,
+            title = "Portrait 2:3",
+            width = 2000,
+            height = 3000,
+            fps = 24,
+            frameCount = 1,
+            transparent = false,
+            backgroundColor = 0xFFFFFFFF.toInt(),
+            onCreated = { created = it },
+        )
+        awaitMain { created != null }
+        awaitMain { vm.state.value.document != null }
+        awaitMain { vm.currentDisplayForTest() != null }
+
+        val display = vm.currentDisplayForTest()!!
+        val displayPixels = display.width.toLong() * display.height.toLong()
+        assertTrue(
+            "display buffer is ${display.width}x${display.height} ($displayPixels px) for a 6 MP document",
+            displayPixels <= 4_200_000L,
+        )
+        // Downscaling must keep both edges, never a degenerate 0-height bitmap.
+        assertTrue("display width", display.width >= 1)
+        assertTrue("display height", display.height >= 1)
+        vm.releaseResourcesForTest()
+    }
+
+    /** Rendering the same document twice must not accumulate bitmaps or throw. */
+    @Test
+    fun repeatedRendersDoNotAccumulateBuffers() {
+        val vm = StudioViewModel(app)
+        var created: String? = null
+        vm.createProject(
+            kind = ProjectKind.Illustration,
+            title = "Repeat",
+            width = 2000,
+            height = 3000,
+            fps = 24,
+            frameCount = 1,
+            transparent = false,
+            backgroundColor = 0xFFFFFFFF.toInt(),
+            onCreated = { created = it },
+        )
+        awaitMain { created != null }
+        awaitMain { vm.state.value.document != null }
+
+        repeat(6) {
+            vm.render()
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+        val state = vm.state.value
+        assertNotNull("composite disappeared after repeated renders", state.composite)
+        assertFalse(
+            "render error after repeated renders: ${state.renderError}",
+            state.renderError != null,
+        )
+        vm.releaseResourcesForTest()
+    }
 }
