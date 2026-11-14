@@ -126,6 +126,26 @@ markers and onion-skin controls; export dialog; home screen with templates and r
 settings for every persisted preference; asset library; help screen listing the real status of
 each feature.
 
+#### Design system
+
+`ui/theme/Theme.kt` holds the palette, type scale and shape tokens; `ui/common/DesignSystem.kt`
+holds the shared primitives every screen composes from (`ForgeCard`, `PanelHeader`, `PillButton`,
+`GestureIconButton`, `StatusChip`, `MicroLabel`, `Hairline`, `EmptyState`). Three surface planes —
+canvas backdrop, panel, raised card — carry the hierarchy, and the artwork is always the most
+saturated thing on screen. Dark and light schemes are both complete; high-contrast and
+large-touch-target modes remap the same tokens.
+
+#### Canvas rendering budget
+
+The composite is produced at document resolution, but the bitmap handed to Compose is
+downscaled to at most **4.2 MP** (`CanvasRenderer.maxDisplayPixels`) and the renderer rotates
+two display buffers so a bitmap Compose is still painting is never recycled. A 2000×3000
+document therefore costs ~24 MB (composite) + ~17 MB (display) instead of ~96 MB, which is
+what previously surfaced as an `OutOfMemoryError` swallowed by the render loop and a **black
+canvas**. The canvas also draws the sheet, paper/checkerboard and border *before* the first
+composite arrives, and reports a render failure in a banner with a retry action rather than
+failing silently.
+
 Keyboard shortcuts: `Ctrl+Z` undo, `Ctrl+Shift+Z` redo, `Ctrl+S` save, `Ctrl+O` open, `B` brush,
 `E` eraser, `I` eyedropper, `Space` hand, `←`/`→` previous/next frame, `F5` play/pause,
 `F6` duplicate frame.
@@ -187,6 +207,7 @@ Everything that gates a release runs on the JVM, so it runs on every push.
 | `ui/StudioShortcutTest` | The documented shortcut table (Ctrl+Z/Y/S/O, B/E/I/Space, ←/→, F5/F6) and that unbound keys do nothing. |
 | `engine/AnimationEngineTest` | Exposure sheet, holds, onion-skin counts/tints/falloff, keyframe interpolation. |
 | `data/ProjectStorageTest` | Project package round-trips: manifest, frames, Room metadata, autosave/recovery, duplication. |
+| `ui/LargeDocumentRenderTest` | The black-canvas regression: a 2000×3000 document must produce a rasterised, non-transparent composite, a display bitmap capped at 4.2 MP with the document's aspect ratio, a zoom-to-fit transform that keeps the sheet inside the viewport, and survive repeated renders. Runs under `@GraphicsMode(NATIVE)` — Robolectric's legacy canvas silently no-ops every draw, so a pixel assertion there passes for the wrong reason. |
 | `core/CoreMathTest`, `ui/DocumentMutatorTest` | Colour maths, geometry, layer mutations, canvas transform maths. |
 
 **`app/src/androidTest` — device/emulator (opt-in)**
