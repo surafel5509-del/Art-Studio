@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
@@ -37,6 +38,8 @@ import com.artforge.mobile.core.color.ColorUtils
 import com.artforge.mobile.core.model.Palette
 import com.artforge.mobile.data.asset.AssetLibrary
 import com.artforge.mobile.ui.common.ColorSwatch
+import com.artforge.mobile.ui.common.GestureIconButton
+import com.artforge.mobile.ui.common.MicroLabel
 import com.artforge.mobile.ui.common.PanelHeader
 import com.artforge.mobile.ui.theme.ForgeColors
 import java.util.UUID
@@ -57,46 +60,48 @@ fun ColorPanel(
 
     Column(modifier.background(ForgeColors.Graphite)) {
         PanelHeader("Colour") {
-            IconButton(onClick = { vm.swapColors() }, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Filled.SwapHoriz, "Swap", tint = ForgeColors.TextSecondary, modifier = Modifier.size(18.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                GestureIconButton(Icons.Filled.SwapHoriz, "Swap colours", { vm.swapColors() }, size = 30)
+                GestureIconButton(
+                    Icons.Filled.BookmarkAdd,
+                    "New palette",
+                    { showPaletteDialog = true },
+                    size = 30,
+                )
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.padding(end = 8.dp)) {
-                ColorSwatch(tools.primaryColor, size = 52, selected = true) { onPickColor(ColorTarget.Primary) }
-                Box(
-                    Modifier
-                        .padding(start = 34.dp, top = 34.dp)
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(ForgeColors.Graphite),
-                ) {
-                    ColorSwatch(tools.secondaryColor, size = 26) { onPickColor(ColorTarget.Secondary) }
+            // Primary swatch sits on top of the secondary one, with a swap affordance.
+            Box(Modifier.padding(end = 12.dp).size(58.dp)) {
+                ColorSwatch(tools.secondaryColor, size = 30) { onPickColor(ColorTarget.Secondary) }
+                Box(Modifier.align(Alignment.BottomEnd)) {
+                    ColorSwatch(tools.primaryColor, size = 40, selected = true) {
+                        onPickColor(ColorTarget.Primary)
+                    }
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text(ColorUtils.toHex(tools.primaryColor), style = MaterialTheme.typography.bodyMedium, color = ForgeColors.TextPrimary)
+                Text(
+                    ColorUtils.toHex(tools.primaryColor).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ForgeColors.TextPrimary,
+                )
                 Text(
                     tools.brush?.name ?: "Custom brush",
                     style = MaterialTheme.typography.bodySmall,
                     color = ForgeColors.TextMuted,
                 )
             }
-            IconButton(onClick = { showPaletteDialog = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Filled.Add, "New palette", tint = ForgeColors.TextSecondary, modifier = Modifier.size(18.dp))
-            }
         }
 
         if (tools.recentColors.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(
+            MicroLabel(
                 "Recent",
-                style = MaterialTheme.typography.labelMedium,
-                color = ForgeColors.TextMuted,
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier.padding(horizontal = 14.dp),
             )
             FlowRow(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 tools.recentColors.take(18).forEach { color ->
@@ -106,11 +111,9 @@ fun ColorPanel(
         }
 
         Spacer(Modifier.height(4.dp))
-        Text(
+        MicroLabel(
             "Harmony",
-            style = MaterialTheme.typography.labelMedium,
-            color = ForgeColors.TextMuted,
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp),
         )
         val harmonies = remember(tools.primaryColor) {
             listOf(
@@ -123,13 +126,8 @@ fun ColorPanel(
             harmonies.forEach { color -> ColorSwatch(color, size = 24) { vm.setPrimaryColor(color) } }
         }
 
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Palettes",
-            style = MaterialTheme.typography.labelMedium,
-            color = ForgeColors.TextMuted,
-            modifier = Modifier.padding(horizontal = 12.dp),
-        )
+        Spacer(Modifier.height(6.dp))
+        MicroLabel("Palettes", modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
         BuiltInPalettes.forEach { (name, colors) ->
             PaletteRow(name, colors) { color -> vm.setPrimaryColor(color) }
         }
@@ -177,10 +175,11 @@ fun ColorPanel(
 
 @Composable
 private fun PaletteRow(name: String, colors: List<Int>, onPick: (Int) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
-        Text(name, style = MaterialTheme.typography.labelSmall, color = ForgeColors.TextMuted)
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            colors.forEach { color -> ColorSwatch(color, size = 24, onClick = { onPick(color) }) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp)) {
+        Text(name, style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextSecondary)
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            colors.forEach { color -> ColorSwatch(color, size = 22, onClick = { onPick(color) }) }
         }
     }
 }

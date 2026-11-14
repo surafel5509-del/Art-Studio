@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +41,7 @@ import com.artforge.mobile.core.model.BrushCategory
 import com.artforge.mobile.core.model.BrushPreset
 import com.artforge.mobile.engine.draw.BrushLibrary
 import com.artforge.mobile.ui.common.PanelHeader
+import com.artforge.mobile.ui.common.StatusChip
 import com.artforge.mobile.ui.common.ValueSlider
 import com.artforge.mobile.ui.theme.ForgeColors
 
@@ -51,11 +54,7 @@ fun BrushPanel(
 ) {
     Column(modifier.background(ForgeColors.Graphite)) {
         PanelHeader("Brush") {
-            Text(
-                tools.brush?.name ?: "Custom",
-                style = MaterialTheme.typography.labelSmall,
-                color = ForgeColors.Accent,
-            )
+            StatusChip(tools.brush?.name ?: "Custom", color = ForgeColors.Accent)
         }
         ValueSlider("Size", tools.brushSize, 1f..400f, vm::setBrushSize, formatter = { "${it.toInt()} px" })
         ValueSlider("Opacity", tools.opacity, 0.01f..1f, vm::setOpacity, formatter = { "${(it * 100).toInt()}%" })
@@ -75,14 +74,16 @@ fun BrushGallerySheet(tools: ToolState, vm: StudioViewModel) {
         BrushLibrary.search(query).filter { category == null || it.category == category }
     }
 
-    Column(Modifier.fillMaxWidth().background(ForgeColors.Graphite).padding(8.dp)) {
-        Text("Brush library", style = MaterialTheme.typography.titleMedium, color = ForgeColors.TextPrimary)
-        Spacer(Modifier.height(6.dp))
+    Column(Modifier.fillMaxWidth().background(ForgeColors.Graphite).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Text("Brush library", style = MaterialTheme.typography.titleLarge, color = ForgeColors.TextPrimary)
+        Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
             placeholder = { Text("Search brushes") },
             singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            leadingIcon = { Icon(Icons.Filled.Search, null, modifier = Modifier.size(18.dp)) },
             modifier = Modifier.fillMaxWidth(),
         )
         FlowRow(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -138,7 +139,7 @@ private fun BrushRow(preset: BrushPreset, selected: Boolean, onClick: () -> Unit
             )
         }
         if (preset.favorite) {
-            androidx.compose.material3.Icon(
+            Icon(
                 Icons.Filled.Star,
                 "Favourite",
                 tint = ForgeColors.AccentWarm,

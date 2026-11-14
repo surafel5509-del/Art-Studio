@@ -21,6 +21,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
@@ -53,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import com.artforge.mobile.core.model.BlendModeLabels
 import com.artforge.mobile.core.model.LayerKind
 import com.artforge.mobile.core.model.LayerKindLabels
+import com.artforge.mobile.ui.common.GestureIconButton
 import com.artforge.mobile.ui.common.PanelHeader
 import com.artforge.mobile.ui.common.ValueSlider
 import com.artforge.mobile.ui.theme.ForgeColors
@@ -75,18 +80,19 @@ fun LayerPanel(
     Column(modifier.background(ForgeColors.Graphite)) {
         PanelHeader("Layers") {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { vm.addLayer() }, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.Add, "Add layer", tint = ForgeColors.TextSecondary, modifier = Modifier.size(18.dp))
-                }
-                IconButton(onClick = { state.activeLayerId?.let(vm::duplicateLayer) }, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.ContentCopy, "Duplicate", tint = ForgeColors.TextSecondary, modifier = Modifier.size(18.dp))
-                }
-                IconButton(
-                    onClick = { state.activeLayerId?.let(vm::deleteLayer) },
-                    modifier = Modifier.size(28.dp),
-                ) {
-                    Icon(Icons.Filled.Delete, "Delete", tint = ForgeColors.Danger, modifier = Modifier.size(18.dp))
-                }
+                GestureIconButton(Icons.Filled.Add, "Add layer", { vm.addLayer() }, size = 30)
+                GestureIconButton(
+                    Icons.Filled.ContentCopy,
+                    "Duplicate layer",
+                    { state.activeLayerId?.let(vm::duplicateLayer) },
+                    size = 30,
+                )
+                GestureIconButton(
+                    Icons.Filled.Delete,
+                    "Delete layer",
+                    { state.activeLayerId?.let(vm::deleteLayer) },
+                    size = 30,
+                )
             }
         }
 
@@ -168,26 +174,30 @@ fun LayerPanel(
                 }
             }
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                SmallChip(if (active.alphaLocked) "Alpha Locked" else "Alpha Lock") {
+                SmallChip("Alpha lock", active.alphaLocked, Icons.Filled.Lock) {
                     vm.setAlphaLock(active.id, !active.alphaLocked)
                 }
-                SmallChip(if (active.clippingMask) "Clipped" else "Clip") {
+                SmallChip("Clip", active.clippingMask, Icons.Filled.ContentCut) {
                     vm.setClipping(active.id, !active.clippingMask)
                 }
-                SmallChip(if (active.maskFrameId != null) "Remove Mask" else "Add Mask") {
+                SmallChip(
+                    if (active.maskFrameId != null) "Drop mask" else "Mask",
+                    active.maskFrameId != null,
+                    Icons.Filled.Layers,
+                ) {
                     if (active.maskFrameId != null) vm.removeLayerMask(active.id) else vm.addLayerMask(active.id)
                 }
             }
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                SmallChip("Group") { vm.groupSelected() }
-                SmallChip("Merge Down") { vm.mergeDown(active.id) }
-                SmallChip("Flatten") { vm.flattenLayers() }
+                SmallChip("Group", false, Icons.Filled.FolderOpen) { vm.groupSelected() }
+                SmallChip("Merge down", false, Icons.Filled.ArrowDownward) { vm.mergeDown(active.id) }
+                SmallChip("Flatten", false, Icons.Filled.Layers) { vm.flattenLayers() }
             }
         }
     }
@@ -359,14 +369,23 @@ private fun Badge(text: String) {
 }
 
 @Composable
-private fun SmallChip(label: String, onClick: () -> Unit) {
-    Box(
+private fun SmallChip(
+    label: String,
+    selected: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    val fg = if (selected) ForgeColors.Accent else ForgeColors.TextSecondary
+    Row(
         Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(ForgeColors.GraphiteElevated)
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) ForgeColors.Accent.copy(alpha = 0.16f) else ForgeColors.GraphiteElevated)
             .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = ForgeColors.TextSecondary)
+        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(12.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = fg)
     }
 }
