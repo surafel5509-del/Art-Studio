@@ -235,9 +235,10 @@ fun StudioScreen(
                         .fillMaxHeight()
                         .background(ForgeColors.CharcoalDeep),
                 ) {
-                    if (state.renderError != null) {
+                    val renderError = state.renderError
+                    if (renderError != null) {
                         RenderErrorBanner(
-                            message = state.renderError,
+                            message = renderError,
                             onRetry = { vm.refresh() },
                         )
                     }
