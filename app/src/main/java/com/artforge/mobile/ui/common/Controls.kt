@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -244,9 +243,3 @@ fun CheckerboardBackground(modifier: Modifier = Modifier, cellSize: Float = 12f)
         }
     }
 }
-
-@Composable
-fun SpacerW(width: Int) = Spacer(Modifier.width(width.dp))
-
-@Composable
-fun SpacerH(height: Int) = Spacer(Modifier.height(height.dp))
