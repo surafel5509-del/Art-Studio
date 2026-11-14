@@ -51,21 +51,29 @@ fun ValueSlider(
     formatter: (Float) -> String = { String.format("%.2f", it) },
     enabled: Boolean = true,
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextSecondary)
-            Text(formatter(value), style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextPrimary)
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) ForgeColors.TextSecondary else ForgeColors.TextMuted,
+            )
+            Text(
+                formatter(value),
+                style = MaterialTheme.typography.titleSmall,
+                color = if (enabled) ForgeColors.TextPrimary else ForgeColors.TextMuted,
+            )
         }
         androidx.compose.material3.Slider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
             enabled = enabled,
-            modifier = Modifier.fillMaxWidth().height(28.dp),
+            modifier = Modifier.fillMaxWidth().height(26.dp),
         )
     }
 }
@@ -79,7 +87,7 @@ fun ToggleRow(
     description: String? = null,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -89,7 +97,11 @@ fun ToggleRow(
                 Text(description, style = MaterialTheme.typography.bodySmall, color = ForgeColors.TextMuted)
             }
         }
-        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onCheckedChange)
+        androidx.compose.material3.Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.height(26.dp),
+        )
     }
 }
 
@@ -102,11 +114,19 @@ fun ColorSwatch(
     size: Int = 28,
     onClick: (() -> Unit)? = null,
 ) {
+    val shape = RoundedCornerShape(if (size >= 34) 12.dp else 8.dp)
     val composed = Modifier
         .size(size.dp)
-        .clip(RoundedCornerShape(6.dp))
-        .background(Color(color))
-        .then(if (selected) Modifier.border(2.dp, ForgeColors.Accent, RoundedCornerShape(6.dp)) else Modifier)
+        .clip(shape)
+        // A light inner keyline keeps white / near-white swatches visible on dark panels.
+        .background(Color(color), shape)
+        .then(
+            if (selected) {
+                Modifier.border(2.dp, ForgeColors.Accent, shape)
+            } else {
+                Modifier.border(1.dp, ForgeColors.GraphiteBorder, shape)
+            },
+        )
         .then(if (onClick != null) Modifier.pointerInput(color) { detectTapGestures { onClick() } } else Modifier)
     Box(composed)
 }
