@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.ViewTimeline
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Layers
@@ -234,6 +235,12 @@ fun StudioScreen(
                         .fillMaxHeight()
                         .background(ForgeColors.CharcoalDeep),
                 ) {
+                    if (state.renderError != null) {
+                        RenderErrorBanner(
+                            message = state.renderError,
+                            onRetry = { vm.refresh() },
+                        )
+                    }
                     CanvasSurface(
                         state = state,
                         view = view,
@@ -355,6 +362,47 @@ fun StudioScreen(
                 AnimationTimeline(state, vm, Modifier.fillMaxSize())
             }
         }
+    }
+}
+
+/**
+ * Non-fatal render failure banner. The editor stays usable (strokes still land on the
+ * layer); this only explains why the preview is missing and offers a retry.
+ */
+@Composable
+private fun RenderErrorBanner(message: String, onRetry: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(ForgeColors.Danger.copy(alpha = 0.16f))
+            .border(1.dp, ForgeColors.Danger.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+            .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.ErrorOutline,
+            contentDescription = null,
+            tint = ForgeColors.Danger,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                "Preview unavailable",
+                style = MaterialTheme.typography.titleSmall,
+                color = ForgeColors.TextPrimary,
+            )
+            Text(
+                message,
+                style = MaterialTheme.typography.bodySmall,
+                color = ForgeColors.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        PillButton("Retry", onRetry)
     }
 }
 

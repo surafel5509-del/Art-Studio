@@ -80,6 +80,8 @@ data class StudioState(
     val drawPreview: DrawPreview? = null,
     val droppedFrames: List<String> = emptyList(),
     val pendingRecovery: Boolean = false,
+    /** Non-null when the last canvas render threw; the canvas shows a recovery hint. */
+    val renderError: String? = null,
 ) {
     val activeLayer get() = document?.layers?.firstOrNull { it.id == activeLayerId }
     val isAnimation get() = document?.kind == com.artforge.mobile.core.model.ProjectKind.Animation

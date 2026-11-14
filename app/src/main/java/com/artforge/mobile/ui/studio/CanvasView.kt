@@ -215,6 +215,15 @@ fun CanvasSurface(
                     }
                 }
                 drawSheetBorder(t)
+                if (state.renderError != null) {
+                    // Explain the failure on the canvas instead of showing a silent
+                    // blank page: the user can still draw, but knows why it looks off.
+                    drawRect(
+                        color = ForgeColors.Danger.copy(alpha = 0.18f),
+                        topLeft = Offset(left, top),
+                        size = Size(sheetWidth, sheetHeight),
+                    )
+                }
             } else if (state.loading) {
                 // Document still opening: nothing to draw yet, but never a bare void.
                 drawRect(

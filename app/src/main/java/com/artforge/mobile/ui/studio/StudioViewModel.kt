@@ -2116,6 +2116,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     // Rendering
     // -----------------------------------------------------------------------
 
+    /**
+     * Re-renders the canvas now. Used by the render-error banner's retry action: the
+     * renderer may have recovered (memory pressure eased, frame re-loaded) since the
+     * failure.
+     */
+    fun refresh() {
+        renderJob?.cancel()
+        renderJob = null
+        render()
+    }
+
     private fun scheduleRender() {
         if (renderJob?.isActive == true) return
         renderJob = viewModelScope.launch {
@@ -2132,7 +2143,10 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             // A failed render must never take down the editor: the previous frame stays
             // on screen and the user is told, instead of the canvas silently freezing.
             ForgeLog.e(TAG, "canvas render failed", t)
-            _state.value = _state.value.copy(statusMessage = "Display error: ${t.message}")
+            _state.value = _state.value.copy(
+                statusMessage = "Display error: ${t.message}",
+                renderError = t.message ?: t::class.java.simpleName,
+            )
         }
     }
 
@@ -2190,6 +2204,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             canvasHeight = doc.settings.height,
             canUndo = undo.canUndo,
             canRedo = undo.canRedo,
+            renderError = null,
         )
     }
 
