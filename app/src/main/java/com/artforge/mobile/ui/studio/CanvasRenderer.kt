@@ -36,7 +36,14 @@ class CanvasRenderer(
     private var displayBuffer: Bitmap? = null
 
     /** Maximum pixels rendered per frame; larger documents are downsampled. */
-    var maxDisplayPixels: Long = 16_000_000L
+    /**
+     * Upper bound on the pixels actually pushed to the screen. 4.2 MP is more than any
+     * phone needs for a zoom-to-fit canvas and keeps peak memory low: a 2000x3000
+     * document used to allocate 24 MB for the composite, 24 MB for the display buffer
+     * and another 24 MB for the copy handed to Compose, which is enough to throw
+     * OutOfMemoryError on a mid-range device and leave the canvas black.
+     */
+    var maxDisplayPixels: Long = 4_200_000L
 
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val noFilterPaint = Paint().apply { isFilterBitmap = false }
@@ -269,6 +276,8 @@ class CanvasRenderer(
         }
     }
 
+    private var previousDisplay: Bitmap? = null
+
     private fun obtainComposite(width: Int, height: Int): Bitmap {
         val current = compositeBuffer
         if (current == null || current.width != width || current.height != height || current.isRecycled) {
@@ -279,17 +288,23 @@ class CanvasRenderer(
     }
 
     private fun obtainDisplay(width: Int, height: Int): Bitmap {
+        // Two buffers alternate. Compose may still be drawing the bitmap published by the
+        // previous render when the next one starts, so it must never be recycled while it
+        // is on screen — only after it has rotated out.
         val current = displayBuffer
-        if (current == null || current.width != width || current.height != height || current.isRecycled) {
-            current?.recycle()
-            displayBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        }
+        // The spare becomes the drawing target; whatever was on screen becomes the spare.
+        // Nothing that Compose might still be painting is recycled in this frame.
+        previousDisplay?.let { if (!it.isRecycled) it.recycle() }
+        previousDisplay = current
+        displayBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         return displayBuffer!!
     }
 
     fun release() {
         compositeBuffer?.recycle()
         displayBuffer?.recycle()
+        previousDisplay?.let { if (!it.isRecycled) it.recycle() }
+        previousDisplay = null
         compositeBuffer = null
         displayBuffer = null
         compositor.release()

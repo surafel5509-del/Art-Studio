@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -165,34 +166,104 @@ fun CanvasSurface(
     ) {
         val composite = state.composite
         Canvas(Modifier.fillMaxSize()) {
-            if (composite != null && docW > 0f && docH > 0f) {
+            if (docW > 0f && docH > 0f) {
                 val t = transformState.value
                 val left = t.centerX - t.displayWidth / 2f
                 val top = t.centerY - t.displayHeight / 2f
-                // Drop shadow behind the sheet for depth.
+                val sheetWidth = t.displayWidth
+                val sheetHeight = t.displayHeight
+
+                // A canvas that renders nothing is a bug, not a blank page: the sheet and
+                // its checkerboard are drawn from the document size alone, so the user
+                // always sees where the paper is (and can still draw on it).
                 drawRect(
                     color = Color(0x66000000),
                     topLeft = Offset(left + 6f, top + 10f),
-                    size = Size(t.displayWidth, t.displayHeight),
+                    size = Size(sheetWidth, sheetHeight),
                 )
+
                 rotate(t.view.rotation, Offset(t.centerX, t.centerY)) {
                     scale(if (t.view.flipHorizontal) -1f else 1f, 1f, Offset(t.centerX, t.centerY)) {
-                        drawImage(
-                            image = composite,
-                            dstSize = androidx.compose.ui.unit.IntSize(
-                                t.displayWidth.toInt().coerceAtLeast(1),
-                                t.displayHeight.toInt().coerceAtLeast(1),
-                            ),
-                            dstOffset = androidx.compose.ui.unit.IntOffset(
-                                left.toInt(),
-                                top.toInt(),
-                            ),
-                            filterQuality = if (t.scale > 2.4f) FilterQuality.None else FilterQuality.Low,
-                        )
+                        val paper = 0xFFFFFFFF.toInt()
+                        // Base tone: white paper for opaque documents, checkerboard for
+                        // transparent ones. Either way the sheet is visible before the
+                        // first composite arrives and it is never a black rectangle.
+                        if (state.document?.settings?.transparentBackground == true && showCheckerboard) {
+                            drawTransparencyChecker(left, top, sheetWidth, sheetHeight, t.scale)
+                        } else {
+                            drawRect(
+                                color = Color(paper),
+                                topLeft = Offset(left, top),
+                                size = Size(sheetWidth, sheetHeight),
+                            )
+                        }
+                        if (composite != null) {
+                            drawImage(
+                                image = composite,
+                                dstSize = androidx.compose.ui.unit.IntSize(
+                                    sheetWidth.toInt().coerceAtLeast(1),
+                                    sheetHeight.toInt().coerceAtLeast(1),
+                                ),
+                                dstOffset = androidx.compose.ui.unit.IntOffset(
+                                    left.toInt(),
+                                    top.toInt(),
+                                ),
+                                filterQuality = if (t.scale > 2.4f) FilterQuality.None else FilterQuality.Low,
+                            )
+                        }
+
                     }
                 }
                 drawSheetBorder(t)
+            } else if (state.loading) {
+                // Document still opening: nothing to draw yet, but never a bare void.
+                drawRect(
+                    color = Color(0xFF17181C),
+                    topLeft = Offset.Zero,
+                    size = Size(size.width, size.height),
+                )
             }
+        }
+    }
+}
+
+/**
+ * Checkerboard behind the sheet so transparency reads as transparency, not as "black".
+ * The square size follows the zoom so it stays visually constant.
+ */
+private fun DrawScope.drawTransparencyChecker(
+    left: Float,
+    top: Float,
+    width: Float,
+    height: Float,
+    zoom: Float,
+) {
+    val cell = (14f * zoom.coerceIn(0.35f, 3f)).coerceIn(6f, 40f)
+    val dark = Color(0xFFD8D8D8)
+    var y = top
+    var row = 0
+    // Clip to the sheet so the pattern never spills onto the workspace.
+    val sheet = androidx.compose.ui.geometry.Rect(left, top, left + width, top + height)
+    clipRect(sheet.left, sheet.top, sheet.right, sheet.bottom) {
+        while (y < top + height) {
+            var x = left
+            var col = 0
+            while (x < left + width) {
+                if ((row + col) % 2 == 0) {
+                    drawRect(
+                        color = dark,
+                        topLeft = Offset(x, y),
+                        size = Size(
+                            min(cell, left + width - x).coerceAtLeast(0f),
+                            min(cell, top + height - y).coerceAtLeast(0f),
+                        ),
+                    )
+                }
+                x += cell
+                col++
+            }
+            y += cell
+            row++
         }
     }
 }

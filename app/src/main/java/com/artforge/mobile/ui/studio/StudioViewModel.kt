@@ -2181,9 +2181,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         )
         val result = renderer.render(request)
         displayBitmap = result
-        val image = result.copy(Bitmap.Config.ARGB_8888, true)
+        // Hand Compose the renderer's own buffer. It is a fresh bitmap every render (the
+        // renderer rotates two buffers), so no defensive copy is needed — the old
+        // `result.copy()` allocated another 24 MB per frame for a 2000x3000 canvas.
         _state.value = _state.value.copy(
-            composite = image.asImageBitmap(),
+            composite = result.asImageBitmap(),
             canvasWidth = doc.settings.width,
             canvasHeight = doc.settings.height,
             canUndo = undo.canUndo,
