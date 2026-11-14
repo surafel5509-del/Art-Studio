@@ -7,9 +7,11 @@ import com.artforge.mobile.core.model.ProjectKind
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [29])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DebugCompositorTest {
     @Test
     fun debug() {
